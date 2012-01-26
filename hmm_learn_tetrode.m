@@ -14,7 +14,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function [data, spkform, cinv, p] = hmm_learn(filename,saveas)
+function [data, spkform, cinv, p] = hmm_learn(filename,saveas,channels)
 
 %% specify parameters for preprocessing the data
 
@@ -40,7 +40,21 @@ small_thresh = 1;
 
 
 % load the file to sort
-load(filename);
+%just read the streamer file
+%load(filename);
+%check the header; if header size is 90, we are using UEI, if not, use streamer
+header = ReadUEIFile('Filename',filename,'Header');
+if header.headerSize == 90
+	alldata = ReadUEIFile('Filename',filename,'Channels',channels);
+	data = alldata.rawdata;
+	scanrate = alldata.samplingRate;
+else
+	[data,num_channels,scanrate,scan_order,points] = nptReadStreamerFile(filename);
+	if size(data,1) > 4
+		data = data(channels,:);
+	end
+end
+%overwrite default parameters
 % subtract the mean on all channels, each channel should be mean zero
 data=data-repmat(mean(data,2),1,size(data,2));
 
