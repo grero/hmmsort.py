@@ -14,8 +14,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function mlseq = hmm_decode(filename, patchlength, p)
+function mlseq = hmm_decode(filename, patchlength, p,varargin)
 
+Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','');
+Args.flags = {'save'};
+[Args,varargin] = getoptargs(varargin,Args);
 addpath helper_functions
 % specify file to sort, should consist of:
 
@@ -23,21 +26,83 @@ addpath helper_functions
 % spkform   N-dimensional cell of DxK spike templates
 % cinv      inverse of the covariance of the model
 load([filename '.mat'])
+if ~isempty(Args.SourceFile)
+	header = ReadUEIFile('Filename',Args.SourceFile,'Header');
+	if header.headerSize == 73
+		fid = fopen(Args.SourceFile,'r');
+		[header.numChannels,header.samplingRate,scan_order,header.headerSize] = nptParseStreamerHeader(fid);
+		fclose(fid);
+	end
+	M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
+	if header.numChannels > size(data,1) 
+		if ischar(Args.Channels)
+			Args.Channels = str2num(Args.Channels);
+		end
+		if length(Args.Channels)~=0
+			data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+			data = data(Args.Channels,:);
+		elseif ~isempty(Args.Group)
+			%need to load the descriptor
+			g = str2num(Args.Group)
+			parts = strsplit(Args.SourceFile,'_');
+			descriptor = ReadDescriptor([parts{1} '_descriptor.txt']);
+			channels = descriptor.channel(descriptor.group==2);
+			if length(channels)==0
+				disp('Channel mismatch. Could not proceed');
+				return
+			end
+			data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+			data = data(channels,:);
+			Args.Channels = channels;
+		else
+			disp('Channel mismatch. Could not proceed')
+			return
+		end
+	else
+		data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+	end
+
+end
 
 % sort the data
 % length of the pieces to be sorted at once
 if nargin < 2
     patchlength = 20000;
+else
+	if ischar(patchlength)
+		patchlength = str2num(patchlength);
+	end
 end
-
 % spiking probability
 if nargin <3
     p = 1e-10;
+else
+	if ischar(p)
+		p = str2num(p);
+	end
 end
+
 
 % mlseq is an NxT array with the states of all N templates at each time
 mlseq = cutsort(data, spkform, cinv, patchlength, p);
-
+%save sequence to sorting file; if a source file was used, save to a file consistent with that name
+if Args.save
+	if ~isempty(Args.SourceFile)
+		fname = [Args.SourceFile '.mat'];
+		if exist(fname)
+			save(fname,'mlseq','spikeForms','-append');
+		else
+			save(fname,'mlseq','spikeForms');
+		end
+	else
+		save([filename '.mat'],'mlseq','-append');
+		fname = [filename '.mat'];
+	end
+	if length(Args.Channels)>0
+		Channels = Args.Channels;
+		save(fname,'Channels','-append');
+	end
+end
 end
 
 function mlseq = cutsort(data, spkform, cinv, patchlength, p)

@@ -14,7 +14,28 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function [data, spkform, cinv, p] = hmm_learn(filename,saveas,channels)
+function [data, spkform, cinv, p] = hmm_learn_tetrode(filename,saveas,channels,varargin)
+
+Args = struct('Group','');
+[Args,varargin] = getoptargs(varargin,Args);
+if ~isempty(Args.Group)
+	if ischar(Args.Group)
+		g = str2num(Args.Group);
+	else
+		g = Args.Group;
+	end
+
+	parts = strsplit(filename,'_');
+	descriptor = ReadDescriptor([parts{1} '_descriptor.txt']);
+	channels = descriptor.channel(descriptor.group==2);
+elseif ischar(channels)
+	channels = str2num(channels);
+end
+
+%sometimes we don't have vartest
+if ~exist('vartest')
+	addpath(genpath('/Applications/MATLAB_R2010a.app/toolbox/stats'))
+end
 
 %% specify parameters for preprocessing the data
 
@@ -44,27 +65,41 @@ small_thresh = 1;
 %load(filename);
 %check the header; if header size is 90, we are using UEI, if not, use streamer
 header = ReadUEIFile('Filename',filename,'Header');
-if header.headerSize == 90
-	alldata = ReadUEIFile('Filename',filename,'Channels',channels);
-	data = alldata.rawdata;
-	scanrate = alldata.samplingRate;
-else
-	[data,num_channels,scanrate,scan_order,points] = nptReadStreamerFile(filename);
-	if size(data,1) > 4
-		data = data(channels,:);
-	end
+if header.headerSize == 73
+	fid = fopen(filename,'r');
+	[header.numChannels,header.samplingRate,scan_order,header.headerSize] = nptParseStreamerHeader(fid);
+	fclose(fid);
 end
-%overwrite default parameters
-% subtract the mean on all channels, each channel should be mean zero
-data=data-repmat(mean(data,2),1,size(data,2));
+scanrate = header.samplingRate;
+M = memmapfile(filename,'format','int16','offset',header.headerSize);
+if isempty(strfind(filename,'bandpass')) && isempty(strfind(filename,'highpass'))
+
+	data = zeros(length(channels),length(M.Data)/header.numChannels);
+	for ch =1:length(channels)
+		data(ch,:) = M.Data(ch:header.numChannels:end);
+	end
+	% subtract the mean on all channels, each channel should be mean zero
+	data=data-repmat(mean(data,2),1,size(data,2));
 
 
-%% preprocess the data... filter, upsample, add cwt channel...
+	%% preprocess the data... filter, upsample, add cwt channel...
 
-% bandpass filter between 100 Hz and 6 kHz
-data = ftfil(data,scanrate,100,6000);
+	% bandpass filter between 100 Hz and 6 kHz
+	data = ftfil(data,scanrate,100,6000);
+else
+	data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+end
+if size(data,1) ~= length(channels)
+	data = data(channels,:);
+end
 % upsample
-data = spline(1:length(data),data,1:1/upsample_factor:length(data));
+if upsample_factor ~= 1
+	data = spline(1:length(data),data,1:1/upsample_factor:length(data));
+end
+%use 30% of the data for learning, but limit to 1 million elements
+winlength = min(0.1*size(data,2),3.0e6);
+%overwrite default parameters
+splitp=.5/scanrate; % firingrate limit, where we discard a spikeform
 % add a channel with continuous wavelet transform
 % % data=[data;cwt(data,1,'db2')];
 % the range on all channels is equalized - this change is cosmetical.
@@ -171,8 +206,13 @@ end
 figure(100);clf;ndplot(W);
 
 disp(['found ' num2str(length(spkform)) ' different neurons:']);
+%convert from cell arary to ND array
+spikeForms = zeros(length(spkform),size(spkform{1},1),size(spkform{1},2));
+for i=1:length(spkform)
+	spikeForms(i,:,:) = spkform{i};
+end
 if nargin >1
-    save(saveas,'data','cinv','spkform');
+    save(saveas,'data','cinv','spkform','spikeForms');
 end
 
 end
