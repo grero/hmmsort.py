@@ -43,10 +43,15 @@ if ~isempty(Args.SourceFile)
 			data = data(Args.Channels,:);
 		elseif ~isempty(Args.Group)
 			%need to load the descriptor
-			g = str2num(Args.Group)
+			if ischar(Args.Group)
+				Args.Group = str2num(Args.Group);
+			end
+			g = Args.Group;
 			parts = strsplit(Args.SourceFile,'_');
-			descriptor = ReadDescriptor([parts{1} '_descriptor.txt']);
-			channels = descriptor.channel(descriptor.group==2);
+			idx = strfind(Args.SourceFile,'highpass');
+			descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+			channels = find(descriptor.group==g);
+			disp(['Sorting waveforms for group ' num2str(g) ' spanning channels ' num2str(channels) ' ...']);
 			if length(channels)==0
 				disp('Channel mismatch. Could not proceed');
 				return
@@ -88,12 +93,20 @@ mlseq = cutsort(data, spkform, cinv, patchlength, p);
 %save sequence to sorting file; if a source file was used, save to a file consistent with that name
 if Args.save
 	if ~isempty(Args.SourceFile)
-		fname = [Args.SourceFile '.mat'];
-		if exist(fname)
-			save(fname,'mlseq','spikeForms','-append');
-		else
-			save(fname,'mlseq','spikeForms');
+		parts = strsplit(Args.SourceFile,'_');
+		idx = strfind(Args.SourceFile,'highpass');
+		if isempty(Args.Group) && ~isempty(Args.Channels)
+			descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+			Args.Group = descriptor.group(descriptor.channel==Args.Channels(1));
 		end
+		nparts = strsplit(Args.SourceFile,'.');
+		fname = sprintf('%sg%.4d.%.4d.mat',Args.SourceFile(1:idx-2),Args.Group,str2num(nparts{end}));
+		disp(['Saving data to file ' fname '...']);
+		%if exist(fname)
+		save(fname,'mlseq','spikeForms');
+		%else
+		%	save(fname,'mlseq','spikeForms');
+		%end
 	else
 		save([filename '.mat'],'mlseq','-append');
 		fname = [filename '.mat'];
