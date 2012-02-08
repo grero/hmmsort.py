@@ -116,6 +116,7 @@ if ~isempty(Args.WindowLength)
 	else
 		winlength = Args.WindowLength;
 	end
+	winlength = min(size(data,2)-1,winlength);
 else
 	%use 30% of the data for learning, but limit to 1 million elements
 	winlength = min(0.1*size(data,2),3.0e6);
