@@ -4,6 +4,8 @@
 Functions to post-process the output from the hmm_sorting matlab routines
 """
 
+#TODO:Add raster plot as the third plot in the last row; this can only be done
+#if we have repetitions, of course
 
 import numpy as np
 import h5py
@@ -13,9 +15,11 @@ import pylab as plt
 import glob
 import h5py
 from PyNpt import fileWriters as fw
+import fileReaders as fr
 from mpl_toolkits.axisartist import Subplot
 import scipy.cluster.hierarchy as hcluster
 import scipy.weave as weave
+import scipy.spatial as spatial
 
 def formatAxis(ax):
     try:
@@ -41,8 +45,26 @@ def writeWwaveformsFile(data,samplingRate=29990):
     ucids[0,:].tofile('testwaveforms.cut',sep='\n')
 
 
+def processGroups(dataFilePattern=None):
+    
+    files = glob.glob('*_descriptor.txt')
+    if len(files)==0:
+        print "No descriptor file found. Skipping..."
+        return
+    descriptorFile = files[0]
+    sessionName,_,_ = descriptorFile.partition('_') 
+    #get groups
+    descriptor = fr.readDescriptor(descriptorFile)
+    groups = np.unique(descriptor['gr_nr'])
+    groups = groups[groups>0]
+    data = {}
+    for g in groups:
+        data[g] = processFiles('%sg%.4d.*.mat' %(sessionName,g),dataFilePattern=dataFilePattern)
 
-def processFiles(pattern,outfile=None): 
+    return data
+
+
+def processFiles(pattern,outFile=None,dataFilePattern=None): 
     """
     Pattern could be any file pattern that glob understands.
     """
@@ -75,7 +97,10 @@ def processFiles(pattern,outfile=None):
         f = files[fidx[fi]]
         print "Processing file %s" % (f,)
         sys.stdout.flush()
-        datafile = f.replace('.mat','') 
+        if dataFilePattern == None:
+            datafile = f.replace('.mat','') 
+        else:
+            datafile = '%s.%.4d' % (dataFilePattern,nparts[fidx[fi]])
         qdata = processData(f,datafile)
         for k in qdata.keys():
             if isinstance(qdata[k],dict):
@@ -110,6 +135,113 @@ def processFiles(pattern,outfile=None):
 
     return data
 
+def processFilesHDF5(pattern,outFile=None,dataFilePattern=None): 
+    """
+    Pattern could be any file pattern that glob understands.
+    """
+    files = glob.glob(pattern)
+    #get numeric part of file names
+    P = pattern.replace('*','([0-9]*)')
+    F = ' '.join((files))
+    nparts = glob.re.findall(P,F)
+    ndigits = len(nparts[0])
+    nparts = np.array(map(int,nparts))
+    #sort
+    fidx = np.argsort(nparts)
+    #detect any gaps
+    gaps = np.diff(nparts[fidx])
+    gapidx = np.where(gaps>1)[0]
+    gaps = gaps[gapidx]
+    if len(gaps) > 0:
+        mf = np.concatenate([nparts[fidx][gapidx[i]] + np.arange(1,gaps[i]) for i in xrange(len(gaps))])
+        ps = pattern.replace('*','%.4d')
+        print "Gaps detected. The missing files are most likely:"
+        for q in mf:
+            print ps % q
+        query = raw_input('Accept [y/n]')
+        if query == 'n':
+            return {}
+
+    data = h5py.File(outFile,'a')
+    data.create_dataset('dataSize',data=np.zeros((1,),dtype=np.int))
+    try:
+        spIdxOffset = 0
+        for fi in xrange(len(files)):
+            f = files[fidx[fi]]
+            print "Processing file %s" % (f,)
+            sys.stdout.flush()
+            if dataFilePattern == None:
+                datafile = f.replace('.mat','') 
+            else:
+                datafile = '%s.%.4d' % (dataFilePattern,nparts[fidx[fi]])
+            qdata = processData(f,datafile)
+            for k in qdata.keys():
+                ks = str(k)
+                if isinstance(qdata[k],dict):
+                    if not ks in data:
+                        #create an empty group
+                       #data[k]  = {}
+                       g = data.create_group(ks)
+                    for kk,vv in qdata[k].items():
+                        kks = str(kk)
+                        if not kks in data[ks]:
+                            #data[ks][kks] = np.empty((0,)+vv.shape[1:])
+                            chunks = tuple([min(10,max(1,s)) for s in vv.shape])
+                            if vv.size>0:
+                                data[ks].create_dataset(kks,data=vv,chunks = chunks,compression=2,fletcher32=True,shuffle=True,maxshape=(None,)+vv.shape[1:]) 
+                            else:
+                                data[ks].create_dataset(kks,shape=vv.shape,chunks = chunks,compression=2,fletcher32=True,shuffle=True,maxshape=(None,))
+
+                            #data[k][kk] = vv
+                        else:
+                            S = data[ks][kks].shape
+                            Sv = vv.shape
+                            if Sv[0]==0:
+                                continue
+                            #resize the dataset; only along the first dimension
+                            newsize = (S[0] + Sv[0],) + S[1:]
+                            data[ks][kks].resize(newsize)
+                            if k == 'unitTimePoints':
+                                data[ks][kks][S[0]:S[0]+Sv[0]] = vv+data['dataSize']
+                            elif k == 'spikeIdx':
+                                data[ks][kks][S[0]:S[0]+Sv[0]] = vv+spIdxOffset
+                            elif k == 'uniqueIdx' or k == 'nonOverlapIdx':
+                                data[ks][kks][S[0]:S[0]+Sv[0]] = vv+S[0]
+                            else:
+                                data[ks][kks][S[0]:S[0]+Sv[0]] = vv 
+                else:
+                    if k == 'spikeForms':
+                        if not ks in data:
+                            data.create_dataset('spikeForms',data=qdata[k])
+                    elif k == 'channels':
+                        if not ks in data:
+                            data.create_dataset('channels',data=qdata[k])
+                    elif k == 'dataSize':
+                        if fidx[fi] in gapidx:
+                            #we have a gap; i.e. the next file is missing. In that
+                            #case, we have to offset by more
+                            data[ks]+=gaps[gapidx==fidx[fi]]*qdata[k]
+                        else:
+                            data[ks][0]+=qdata[k]
+                    else:
+                        if not ks in data:
+                            chunks = tuple([min(10,s) for s in qdata[k].shape])
+                            data.create_dataset(ks,data=qdata[k],chunks=chunks,compression=2,fletcher32=True,shuffle=True,maxshape=None)
+                        else:
+                            S = data[ks].shape
+                            Sv = qdata[k].shape                            
+                            newsize = (S[0]+Sv[0],) + S[1:]
+                            data[ks].resize(newsize)
+                            data[ks][S[0]:S[0]+Sv[0]] =qdata[k]
+            data.flush()
+            spIdxOffset += qdata['allSpikes'].shape[0]
+    finally:
+        data.close()
+    data = h5py.File(outFile,'r')
+
+    return data
+
+"""
 def processFilesHDF5(pattern,outfile=None): 
     files = glob.glob(pattern)
     if outfile == None:
@@ -155,6 +287,7 @@ def processFilesHDF5(pattern,outfile=None):
 
     data = h5py.File(outfile,'r')
     return data
+"""
 
 def processData(fname,dataFile=None):
 
@@ -183,8 +316,10 @@ def processData(fname,dataFile=None):
         spikeStart = np.where((seq==1).any(0)*(seq<=1).all(0))[0]
         #make sure to exclude spikes that start towards the end of the
         #file;these will not have an ending point
-        spikeStart = spikeStart[spikeStart<seq.shape[1]-spikeForms.shape[-1]]
+        #spikeStart = spikeStart[spikeStart<seq.shape[1]-spikeForms.shape[-1]]
         spikeEnd = np.where((seq==spikeForms.shape[-1]-1).any(0)*((seq==spikeForms.shape[-1]-1)+(seq==0)).all(0))[0]
+        #make sure we are only using spikes that end
+        spikeStart = spikeStart[spikeStart < spikeEnd[-1]]
         pidx = np.array([spikeStart,spikeEnd]).T.flatten()
         #create a spike matrix
         spMatrix = np.zeros((len(cidx),spikeForms.shape[1],noverlapPts)).transpose((1,0,2))
@@ -229,22 +364,28 @@ def processData(fname,dataFile=None):
         spikeIdx = dict([(u,np.where(i==u)[0]) for u in np.unique(i)]) 
         spikes = {}
         channels = None
-        if 'data' in sortData:
-            data = sortData['data'][:]
-        elif dataFile != None:
-            fid = open(dataFile,'r')
-            hs = np.fromfile(fid,dtype=np.uint32,count=1)
-            nchs = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.int64)
-            fid.close()
-            data = np.memmap(dataFile,dtype=np.int16,offset=hs,mode='r')
-            data = data.reshape(data.size/nchs,nchs)
-            if 'Channels' in sortData:
-                channels = sortData['Channels'][:].flatten().astype(np.int)-1
-                data = data[:,channels]
-        else:
-            print "Sorry, no data found. Exiting..."
-            sortData.close()
-            return {'unitTimePoints': units,'spikeIdx':spikeIdx}
+        data = None
+        if dataFile == None:
+            if 'data' in sortData:
+                data = sortData['data'][:]
+            elif 'dataFile' in sortData:
+                dataFile = sortData['dataFile']
+        if data == None:
+            if dataFile != None:
+                fid = open(dataFile,'r')
+                hs = np.fromfile(fid,dtype=np.uint32,count=1)
+                nchs = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.int64)
+                fid.close()
+                data = np.memmap(dataFile,dtype=np.int16,offset=hs,mode='r')
+                data = data.reshape(data.size/nchs,nchs)
+                if 'Channels' in sortData:
+                    #subtract 1 because we are dealing with matlab base-1 indexing
+                    channels = sortData['Channels'][:].flatten().astype(np.int)-1
+                    data = data[:,channels]
+            else:
+                print "Sorry, no data found. Exiting..."
+                sortData.close()
+                return {'unitTimePoints': units,'spikeIdx':spikeIdx}
         
         keys = np.array(units.keys())
         uniqueIdx = {}
@@ -254,8 +395,12 @@ def processData(fname,dataFile=None):
             idx = idx[idx<data.shape[0]-22][:,None]+ np.arange(-10,22)[None,:]
             spikes[c] = data[idx,:]
             otherkeys = keys[keys!=c] 
-            uniqueIdx[c] = np.where(np.array([pdist_threshold(units[c],units[c1],3) for c1 in otherkeys]).prod(0))[0]
-            nonoverlapIdx[c] = np.where(np.array([pdist_threshold(units[c],units[c1],32) for c1 in otherkeys]).prod(0))[0]
+            if len(otherkeys>0):
+                uniqueIdx[c] = np.where(np.array([pdist_threshold(units[c],units[c1],3) for c1 in otherkeys]).prod(0))[0]
+                nonoverlapIdx[c] = np.where(np.array([pdist_threshold(units[c],units[c1],32) for c1 in otherkeys]).prod(0))[0]
+            else:
+                uniqueIdx[c] = np.arange(len(units[c]))
+                nonoverlapIdx[c] = np.arange(len(units[c]))
 
         #get the unique spikes
         allSpikeIdx = np.concatenate(units.values(),axis=0)
@@ -368,7 +513,7 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
     for c in units.keys():
         ymin,ymax = (5000,-5000)
         fig = plt.figure(figsize=(10,6))
-        print "Unit: %d " %(c,)
+        print "Unit: %s " %(str(c),)
         print "\t Plotting waveforms..."
         sys.stdout.flush()
         #allspikes = data[units[c][:,None]+np.arange(-10,22)[None,:],:]
@@ -385,11 +530,11 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         fig.add_axes(ax)
         formatAxis(ax)
         #plt.plot(x.T,sp,'b')
-        m = allspikes.mean(0)
-        s = allspikes.std(0)
+        m = allspikes[:].mean(0)
+        s = allspikes[:].std(0)
         plt.plot(x.T,m,'k',lw=1.5)
 
-        plt.plot(xt.T,spikeForms[c].T,'r')
+        plt.plot(xt.T,spikeForms[int(c)].T,'r')
         for i in xrange(x.shape[0]):
             plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
         yl = ax.get_ylim()
@@ -400,10 +545,10 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         ax = Subplot(fig,2,3,2)
         fig.add_axes(ax)
         formatAxis(ax)
-        m =  allspikes[nonOverlapIdx,:,:].mean(0)
-        s =  allspikes[nonOverlapIdx,:,:].std(0)
+        m =  allspikes[:][nonOverlapIdx,:,:].mean(0)
+        s =  allspikes[:][nonOverlapIdx,:,:].std(0)
         plt.plot(x.T,m,'k',lw=1.5)
-        plt.plot(xt.T,spikeForms[c].T,'r')
+        plt.plot(xt.T,spikeForms[int(c)].T,'r')
         for i in xrange(x.shape[0]):
             plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
         yl = ax.get_ylim()
@@ -417,10 +562,10 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         fig.add_axes(ax)
         formatAxis(ax)
 
-        m =  allspikes[overlapIdx,:,:].mean(0)
-        s =  allspikes[overlapIdx,:,:].std(0)
+        m =  allspikes[:][overlapIdx,:,:].mean(0)
+        s =  allspikes[:][overlapIdx,:,:].std(0)
         plt.plot(x.T,m,'k',lw=1.5)
-        plt.plot(xt.T,spikeForms[c].T,'r')
+        plt.plot(xt.T,spikeForms[int(c)].T,'r')
         for i in xrange(x.shape[0]):
             plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
         yl = ax.get_ylim()
@@ -442,7 +587,7 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         """
         print "\t ISI distribution..."
         sys.stdout.flush()
-        timepoints = qdata['unitTimePoints'][c]/(samplingRate/1000)
+        timepoints = qdata['unitTimePoints'][c][:]/(samplingRate/1000)
         isi = np.log(np.diff(timepoints))
         n,b = np.histogram(isi,100)
         ax = Subplot(fig,2,3,4)
@@ -466,12 +611,17 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         print "\t auto-correllogram..."
         sys.stdout.flush()
         if not 'autoCorr' in qdata:
-            qdata['autoCorr'] = {}
+            if isinstance(qdata,dict):
+                qdata['autoCorr'] = {}
+            else:
+                qdata.create_group('autoCorr')
         if not c in qdata['autoCorr']:
             C = pdist_threshold2(timepoints,timepoints,50)
             qdata['autoCorr'][c] = C
+            if not isinstance(qdata,dict):
+                qdata.flush()
         else:
-            C = qdata['autoCorr'][c]
+            C = qdata['autoCorr'][c][:]
         n,b = np.histogram(C[C!=0],np.arange(-50,50))
         ax = Subplot(fig,2,3,5)
         fig.add_axes(ax)
@@ -480,7 +630,7 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         ax.fill_betweenx([0,n.max()],-1.0,1.0,color='r',alpha=0.3)
         ax.set_xlabel('Lag [ms]')
         if save:
-            fn = os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/%s' % (fname.replace('.pdf','Unit%d.pdf' %(c,)),))
+            fn = os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/%s' % (fname.replace('.pdf','Unit%s.pdf' %(str(c),)),))
             fig.savefig(fn,bbox='tight')
 
     if not save:
@@ -500,19 +650,22 @@ def plotXcorr(qdata,save=False,fname='hmmSortingUnits.pdf'):
     nunits = len(units)
     i = 1
     if not 'XCorr' in qdata:
-        qdata['XCorr'] = {}
+        if isinstance(qdata,dict):
+            qdata['XCorr'] = {}
+        else:
+            qdata.create_group('XCorr')
     for k1 in xrange(len(units)-1) :
-        if not k1 in qdata['XCorr']:
-            qdata['XCorr'][k1] = {}
+        if not units[k1] in qdata['XCorr']:
+            qdata['XCorr'].create_group(units[k1])
         for k2 in xrange(k1+1,len(units)):
-            if not k2 in qdata['XCorr'][k1]:
-                T1 = unitTimePoints[k1]/(samplingRate/1000)
-                T2 = unitTimePoints[k2]/(samplingRate/1000)
+            if not units[k2] in qdata['XCorr'][units[k1]]:
+                T1 = unitTimePoints[units[k1]][:]/(samplingRate/1000)
+                T2 = unitTimePoints[units[k2]][:]/(samplingRate/1000)
                 #compute differences less than 50 ms
                 C = pdist_threshold2(T1,T2,50)
-                qdata['XCorr'][k1][k2] = C
+                qdata['XCorr'][units[k1]].create_dataset(units[k2],data=C,compression=2,fletcher32=True,shuffle=True)
             else:
-                C = qdata['XCorr'][k1][k2]
+                C = qdata['XCorr'][units[k1]][units[k2]][:]
             n,b = np.histogram(C,np.arange(-50,50))
             ax = Subplot(fig,nunits-1,nunits,k1*nunits+k2) 
             fig.add_axes(ax)
@@ -520,6 +673,62 @@ def plotXcorr(qdata,save=False,fname='hmmSortingUnits.pdf'):
             ax.plot(b[:-1],n,'k')
             ax.fill_betweenx([0,n.max()],-1.0,1.0,color='r',alpha=0.3)
     if save:
-        pass
+        fig.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/%s' %( fname,)),bbox='tight') 
     else:
         plt.draw()
+
+def verifySpikes(data,dataFilePattern=None):
+    """
+    Overlay the spikes found with the highpass data files
+    """
+    dataFiles = glob.glob(dataFilePattern)
+
+
+def isolationDistance(c,fdata,cids,ncids=None):
+    
+    #get the number of points in this cluster
+    npoints = sum(cids==c)
+    #get the cluster mean
+    m = fdata[cids==c,:].mean(0)
+    #get the largest distance from the mean for points in this cluster
+    dm = np.sqrt(((fdata[cids==c,:] - m)**2).sum(1))
+    #get points not in this cluster
+    if ncids==None:
+        ncids = cids!=c
+    #get the distance from this cluster to mean to all the points
+    D = np.sqrt(((fdata[ncids,:] - m[None,:])**2).sum(1))
+
+    #isolation distance is the distance to the n'th point not in this cluster,
+    #where n is the number of points in this cluster
+    #normalize by the largest distance from the mean to a point int hs cluster
+    Ds = np.sort(D)
+    if len(Ds)>npoints:
+        return Ds[npoints-1]/dm
+    else:
+        return Ds[-1]/dm
+
+def findBest3DProjection(fdata,cids):
+    
+    npoints,ndims = fdata.shape
+    clusters = np.unique(cids)
+    clusters = clusters[clusters>=0].astype(np.int)
+    #for all clusters, get the remaining points
+    otherPoints = [cids!=c for c in clusters]
+    maxIsoDist = []
+    bestDims = []
+    
+    #loop through all combinations of 3
+    for i in xrange(ndims-2):
+        for j in xrange(i+1,ndims-1):
+            for k in xrange(j+1,ndims):
+                D = np.zeros((len(clusters),))
+                for c in clusters:
+                    D[c] = isolationDistance(c,fdata[:,[i,j,k]],cids,otherPoints[c])
+                dm = D.max()
+                bestDims.append((i,j,k))
+                maxIsoDist.append(dm)
+   
+    bestDimIdx = np.argmax(maxIsoDist)
+    return bestDims[bestDimIdx]
+
+
