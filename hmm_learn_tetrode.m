@@ -14,10 +14,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function [data, spkform, cinv, p] = hmm_learn_tetrode(filename,saveas,channels,varargin)
+function [data, spkform, cinv, p] = hmm_learn_tetrode(filename,saveas,varargin)
 
-Args = struct('Group','');
+Args = struct('Channels',[],'Group','','WindowLength',1e6);
 [Args,varargin] = getoptargs(varargin,Args);
+%get the descriptor
+idx = strfind(filename,'highpass');
+%parts = strsplit(filename,'_');
+%descriptor = ReadDescriptor([parts{1} '_descriptor.txt']);
+descriptor = ReadDescriptor([filename(1:idx-1) 'descriptor.txt']);
+
 if ~isempty(Args.Group)
 	if ischar(Args.Group)
 		g = str2num(Args.Group);
@@ -25,17 +31,25 @@ if ~isempty(Args.Group)
 		g = Args.Group;
 	end
 
-	parts = strsplit(filename,'_');
-	descriptor = ReadDescriptor([parts{1} '_descriptor.txt']);
-	channels = descriptor.channel(descriptor.group==2);
-elseif ischar(channels)
-	channels = str2num(channels);
+	channels = find(descriptor.group==g);
+elseif ~isempty(Args.Channels)
+		if ischar(channels)
+			channels = str2num(channels);
+		else
+			channels = Args.Channels
+		end
+		Args.Group = descriptor.group(descriptor.channel==channels(1));
+		g = Args.Group;
+else
+	disp('Please specify either a list of channels or a group to sort');
+	return
 end
 
+disp(['Finding templates for group ' num2str(g) ' spanning channels ' num2str(channels) '...']);
 %sometimes we don't have vartest
-if ~exist('vartest')
-	addpath(genpath('/Applications/MATLAB_R2010a.app/toolbox/stats'))
-end
+%if ~exist('vartest')
+%	addpath(genpath('/Applications/MATLAB_R2010a.app/toolbox/stats'))
+%end
 
 %% specify parameters for preprocessing the data
 
@@ -96,8 +110,16 @@ end
 if upsample_factor ~= 1
 	data = spline(1:length(data),data,1:1/upsample_factor:length(data));
 end
-%use 30% of the data for learning, but limit to 1 million elements
-winlength = min(0.1*size(data,2),3.0e6);
+if ~isempty(Args.WindowLength)
+	if ischar(Args.WindowLength)
+		winlength = str2num(Args.WindowLength);
+	else
+		winlength = Args.WindowLength;
+	end
+else
+	%use 30% of the data for learning, but limit to 1 million elements
+	winlength = min(0.1*size(data,2),3.0e6);
+end
 %overwrite default parameters
 splitp=.5/scanrate; % firingrate limit, where we discard a spikeform
 % add a channel with continuous wavelet transform
@@ -212,7 +234,7 @@ for i=1:length(spkform)
 	spikeForms(i,:,:) = spkform{i};
 end
 if nargin >1
-    save(saveas,'data','cinv','spkform','spikeForms');
+    save(saveas,'data','cinv','spkform','spikeForms','winlength');
 end
 
 end
