@@ -78,6 +78,7 @@ else
 		patchlength = str2num(patchlength);
 	end
 end
+patchlength = min(patchlength,size(data,2));
 % spiking probability
 if nargin <3
     p = 1e-10;
@@ -126,7 +127,7 @@ function mlseq = cutsort(data, spkform, cinv, patchlength, p)
 % patchlength   length of the pieces to be sorted at once
 % p             spiking probability
 
-overlaps = 2;
+overlaps = min(2,length(spkform));
 
 if nargin<4
     patchlength=40000;
