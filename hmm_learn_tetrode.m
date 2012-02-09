@@ -229,15 +229,17 @@ end
 figure(100);clf;ndplot(W);
 
 disp(['found ' num2str(length(spkform)) ' different neurons:']);
-%convert from cell arary to ND array
-spikeForms = zeros(length(spkform),size(spkform{1},1),size(spkform{1},2));
-for i=1:length(spkform)
-	spikeForms(i,:,:) = spkform{i};
+if length(spkform)>0
+	%convert from cell arary to ND array
+	spikeForms = zeros(length(spkform),size(spkform{1},1),size(spkform{1},2));
+	for i=1:length(spkform)
+		spikeForms(i,:,:) = spkform{i};
+	end
+	if nargin >1
+		save(saveas,'data','cinv','spkform','spikeForms','winlength');
+		disp(['Data saved to file ' saveas])
+	end
 end
-if nargin >1
-    save(saveas,'data','cinv','spkform','spikeForms','winlength');
-end
-
 end
 
 
@@ -459,7 +461,8 @@ end
 j=0;
 ind=[];
 woe=zeros(1,length(forms));
-
+spkform = {};
+pp = [];
 for i=1:length(forms)
     woe(i)=sum(sum(forms{i}.*(cinv*forms{i})));
     j=j+1;
