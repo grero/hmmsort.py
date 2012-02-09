@@ -32,17 +32,23 @@ def formatAxis(ax):
     ax.axis['right'].set_visible(False)
     ax.axis['top'].set_visible(False)
 
-def writeWwaveformsFile(data,samplingRate=29990):
+def writeWwaveformsFile(data,fname='testwaveforms',samplingRate=29990):
 
-    timestamps = ((np.concatenate(data['unitTimePoints'].values(),axis=0))/(samplingRate/1000.0)).astype(np.uint64)
-    fw.writeWaveformsFile(data['allSpikes'].transpose((0,2,1)),timestamps,'testwaveforms.bin')
+    #TODO:Make sure that we sort the spike times and the units equally
+    keys = np.sort(data['unitTimePoints'].keys())
+    timestamps = ((np.concatenate([data['unitTimePoints'][c] for c in keys],axis=0))/(samplingRate/1000.0)).astype(np.uint64)
+    idx = np.argsort(timestamps)
+    timestamps = timestamps[idx]
+    allspikes = np.concatenate([data['unitSpikes'][c] for c in keys],axis=0)
+    allspikes = allspikes[idx,:,:]
+    fw.writeWaveformsFile(allspikes.transpose((0,2,1)),timestamps,'%s.bin' % (fname,))
     #get the 
-    cids = np.concatenate([np.array([[k]*len(v),v]) for k,v in data['spikeIdx'].items()],axis=1)
-    cids.astype(np.uint64).tofile('testwaveforms.overlap')
+    cids = np.concatenate([np.array([[k]*len(v),v]) for k,v in data['spikeIdx'].items()],axis=1).astype(np.int)
+    cids.astype(np.uint64).tofile('%s.overlap' % (fname,))
     ucids = cids.copy()
     C = np.bincount(cids[1,:])
     ucids[0,C[C>1]] = -1
-    ucids[0,:].tofile('testwaveforms.cut',sep='\n')
+    ucids[0,:].tofile('%s.cut' % (fname,),sep='\n')
 
 
 def processGroups(dataFilePattern=None):
@@ -225,19 +231,23 @@ def processFilesHDF5(pattern,outFile=None,dataFilePattern=None):
                             data[ks][0]+=qdata[k]
                     else:
                         if not ks in data:
-                            chunks = tuple([min(10,s) for s in qdata[k].shape])
-                            data.create_dataset(ks,data=qdata[k],chunks=chunks,compression=2,fletcher32=True,shuffle=True,maxshape=None)
+                            chunks = tuple([max(min(10,s),1) for s in qdata[k].shape])
+                            if qdata[k].shape[0]>0:
+                                data.create_dataset(ks,data=qdata[k],chunks=chunks,compression=2,fletcher32=True,shuffle=True,maxshape=(None,)+qdata[k].shape[1:])
+                            else:
+                                data.create_dataset(ks,shape=qdata[k].shape,chunks=chunks,compression=2,fletcher32=True,shuffle=True,maxshape=(None,) + qdata[k].shape[1:])
                         else:
                             S = data[ks].shape
                             Sv = qdata[k].shape                            
-                            newsize = (S[0]+Sv[0],) + S[1:]
-                            data[ks].resize(newsize)
-                            data[ks][S[0]:S[0]+Sv[0]] =qdata[k]
+                            if Sv[0] > 0:
+                                newsize = (S[0]+Sv[0],) + S[1:]
+                                data[ks].resize(newsize)
+                                data[ks][S[0]:S[0]+Sv[0]] =qdata[k]
             data.flush()
             spIdxOffset += qdata['allSpikes'].shape[0]
     finally:
         data.close()
-    data = h5py.File(outFile,'r')
+    data = h5py.File(outFile,'a')
 
     return data
 
@@ -310,24 +320,24 @@ def processData(fname,dataFile=None):
         noverlapPts = spikeForms.shape[0]*spikeForms.shape[-1]
         #find the total number of states (including overlaps) involved in each
         #spike
-        pidx = np.append([0],np.append(np.where(np.diff(idx)>1)[0]+1,[len(idx)]))
-        cidx =np.diff(pidx)
+        #pidx = np.append([0],np.append(np.where(np.diff(idx)>1)[0]+1,[len(idx)]))
+        #cidx =np.diff(pidx)
         #get the start and the end points of each compound spike
-        spikeStart = np.where((seq==1).any(0)*(seq<=1).all(0))[0]
+        #spikeStart = np.where((seq==1).any(0)*(seq<=1).all(0))[0]
         #make sure to exclude spikes that start towards the end of the
         #file;these will not have an ending point
         #spikeStart = spikeStart[spikeStart<seq.shape[1]-spikeForms.shape[-1]]
-        spikeEnd = np.where((seq==spikeForms.shape[-1]-1).any(0)*((seq==spikeForms.shape[-1]-1)+(seq==0)).all(0))[0]
+        #spikeEnd = np.where((seq==spikeForms.shape[-1]-1).any(0)*((seq==spikeForms.shape[-1]-1)+(seq==0)).all(0))[0]
         #make sure we are only using spikes that end
-        spikeStart = spikeStart[spikeStart < spikeEnd[-1]]
-        pidx = np.array([spikeStart,spikeEnd]).T.flatten()
+        #spikeStart = spikeStart[spikeStart < spikeEnd[-1]]
+        #pidx = np.array([spikeStart,spikeEnd]).T.flatten()
         #create a spike matrix
-        spMatrix = np.zeros((len(cidx),spikeForms.shape[1],noverlapPts)).transpose((1,0,2))
-        spIdxMatrix = np.zeros((len(cidx),noverlapPts),dtype=np.int)
+        #spMatrix = np.zeros((len(cidx),spikeForms.shape[1],noverlapPts)).transpose((1,0,2))
+        #spIdxMatrix = np.zeros((len(cidx),noverlapPts),dtype=np.int)
 
         #create an index that will place each overlap spike in the correct position
         #in the spike matrix
-        k,l = np.where(np.arange(noverlapPts)[None,:]<cidx[:,None])
+        #k,l = np.where(np.arange(noverlapPts)[None,:]<cidx[:,None])
 
         #k and l now gives the spike index and the timepoint index into the spMatrix
         #spMatrix[:,k,l] = S[:,idx]
@@ -365,6 +375,7 @@ def processData(fname,dataFile=None):
         spikes = {}
         channels = None
         data = None
+        dataSize = 0
         if dataFile == None:
             if 'data' in sortData:
                 data = sortData['data'][:]
@@ -378,6 +389,7 @@ def processData(fname,dataFile=None):
                 fid.close()
                 data = np.memmap(dataFile,dtype=np.int16,offset=hs,mode='r')
                 data = data.reshape(data.size/nchs,nchs)
+                dataSize = data.shape[0]
                 if 'Channels' in sortData:
                     #subtract 1 because we are dealing with matlab base-1 indexing
                     channels = sortData['Channels'][:].flatten().astype(np.int)-1
@@ -403,10 +415,12 @@ def processData(fname,dataFile=None):
                 nonoverlapIdx[c] = np.arange(len(units[c]))
 
         #get the unique spikes
-        allSpikeIdx = np.concatenate(units.values(),axis=0)
-        allSpikeIdx = (allSpikeIdx[allSpikeIdx<data.shape[0]-22][:,None]+np.arange(-10,22))[:,None,:].repeat(data.shape[1],1)
-        allSpikes = data[allSpikeIdx,np.arange(data.shape[1])[None,:,None]].transpose((0,2,1))
-        dataSize = data.shape[0]
+        if len(units.keys())>0:
+            allSpikeIdx = np.concatenate(units.values(),axis=0)
+            allSpikeIdx = (allSpikeIdx[allSpikeIdx<data.shape[0]-22][:,None]+np.arange(-10,22))[:,None,:].repeat(data.shape[1],1)
+            allSpikes = data[allSpikeIdx,np.arange(data.shape[1])[None,:,None]].transpose((0,2,1))
+        else:
+            allSpikes = np.empty((0,spikeForms.shape[1],32)).transpose((0,2,1))
         del data
 
     finally:
@@ -588,6 +602,9 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         print "\t ISI distribution..."
         sys.stdout.flush()
         timepoints = qdata['unitTimePoints'][c][:]/(samplingRate/1000)
+        if len(timepoints)<2:
+            print "Too few spikes. Aborting..."
+            continue 
         isi = np.log(np.diff(timepoints))
         n,b = np.histogram(isi,100)
         ax = Subplot(fig,2,3,4)
@@ -677,12 +694,31 @@ def plotXcorr(qdata,save=False,fname='hmmSortingUnits.pdf'):
     else:
         plt.draw()
 
-def verifySpikes(data,dataFilePattern=None):
+def verifySpikes(data,group=1,dataFilePattern=None):
     """
     Overlay the spikes found with the highpass data files
     """
+    #TODO: only shows the first file for now
     dataFiles = glob.glob(dataFilePattern)
-
+    descriptorFile,_,_ = dataFiles[0].partition('.')
+    descriptorFile = '%s.txt' % (descriptorFile.replace('highpass','descriptor'),)
+    #get the descriptor
+    descriptor = fr.readDescriptor(descriptorFile)
+    #get the relevant channels for this group
+    nchannels = sum(descriptor['gr_nr']>0)
+    channels = np.where(descriptor['gr_nr']==group)[0]
+    hdata = np.memmap(dataFiles[0],mode='r',offset=73,dtype=np.int16) 
+    hdata = hdata.reshape(hdata.size/nchannels,nchannels)[:,channels]
+    #calculate offset 
+    offset = np.append([0],np.cumsum(hdata.max(0))[:-1])
+    x = np.arange(hdata.shape[0])
+                       
+    plt.plot(x[:,None].repeat(len(channels),1),hdata+offset[None,:].repeat(hdata.shape[0],0))
+    yl = plt.ylim()
+    timepoints = data['unitTimePoints']
+    for k in timepoints.keys():
+        T = timepoints[k]
+        plt.vlines(T[(T>=x[0])*(T<x[-1])],yl[0],yl[1])
 
 def isolationDistance(c,fdata,cids,ncids=None):
     
