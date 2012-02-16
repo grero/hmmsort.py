@@ -128,8 +128,9 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
     #spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
    
     #combine spkforms from both chunks
-    if spkforms.shape[0]>2:
+    if spkforms.shape[0]>=2:
         spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
+    if spkforms.shape[0]>=1:
         if save:
             outf['spikeForms'] = spkforms
             outf['p'] = p
