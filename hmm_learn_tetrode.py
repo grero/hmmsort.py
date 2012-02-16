@@ -8,6 +8,7 @@ import sys
 import tempfile
 import os
 import h5py
+import glob
 import fileReaders as fr
 import scipy.interpolate as interpolate
 
@@ -71,11 +72,12 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,**kwargs):
+def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,**kwargs):
 
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
         return
+    
     #channels is the 3rd argument
     fid = open(dataFile,'r')
     header_size = np.fromfile(fid,dtype=np.uint32,count=1)
@@ -94,19 +96,46 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,**kwargs):
     #compute the covariance matrix of the full data
     cinv = np.linalg.pinv(np.cov(cdata.T))
     #divide file into two chunks
-    spkforms1,p1,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
-    spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
-   
-    #combine spkforms from both chunks
-    spkforms,p = combineSpikes(np.concatenate((spkforms1,spkforms2),axis=0),np.concatenate((p1,p2),axis=0),cinv,data.shape[0])
+    nchunks = int(np.ceil(1.0*cdata.shape[0]/chunksize))
+    spkforms = []
+    p = []
     if save:
         if outfile == None:
             name,ext = os.path.splitext(dataFile)
+            name.replace('_highpass','')
             outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
         outf = h5py.File(outfile,'a')
-        outf['spikeForms'] = spkforms
-        outf['p'] = p
-        outf.close()
+    for i in xrange(nchunks):
+        print "Processing chunk %d of %d..." % (i+1,nchunks)
+        sys.stdout.flush()
+        try:
+            sp,pp,_ = learnTemplates(cdata[i*chunksize:(i+1)*chunksize,:],samplingRate = sampling_rate,**kwargs)
+
+            spkforms.extend(sp) 
+            p.extend(pp)
+            if save and len(sp)>0:
+                try:
+                    outf.create_group('chunk%d' %(i,))
+                except:
+                    pass
+                outf['chunk%d' %(i,)]['spikeForms'] = sp
+                outf['chunk%d' %(i,)]['p'] = pp 
+                outf.flush()
+        except:
+            continue
+    spkforms = np.array(spkforms)
+    p = np.array(p)
+    #spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
+   
+    #combine spkforms from both chunks
+    if spkforms.shape[0]>2:
+        spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
+        if save:
+            outf['spikeForms'] = spkforms
+            outf['p'] = p
+            outf.close()
+    else:
+        print "No spikeforms found"
 
 
     return spkforms,p
@@ -133,6 +162,9 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,**kw
         splitp = 0.5/samplingRate
     else:
         splitp = splitp/samplingRate
+    if save:
+        #open a file to save the spkforms to
+        pass
     data,spkform,p,cinv = learndbw1(data,iterations=1)
     spkform,p = removeSparse(spkform,p,splitp)
     if debug:
@@ -546,15 +578,90 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1):
 if __name__ == '__main__':
     
     import getopt
-    import sys
 
-    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate='])
+    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize='])
 
     opts = dict(opts)
 
     dataFileName = opts.get('--sourceFile')
+    outFileName = opts.get('--outFile')
     group = int(opts.get('--group','1'))
-    splitp = np.float(opt.get('--minFiringRate','0.5'))
+    splitp = np.float(opts.get('--minFiringRate','0.5'))
+    chunkSize = min(np.float(opts.get('--chunkSize','1.5e6')),1.5e6)
+    if '--combine' in opts:
+       #get all the data file, read the spkforms from each, then combine them 
+       files = opts.get('--sourceFile','').split(',')
+       dataFileName = files[0]
+       spkforms = []
+       p = []
+       for f in files:
+           try:
+               dataFile = h5py.File(f,'r')
+               spkforms.extend(dataFile['spikeForms'][:])
+               p.extend(dataFile['p'][:])
+               dataFile.close()
+           except:
+               continue
 
-    spkforms,p = learnTemplatesFromFile(dataFileFilen,group,splitp = splitp)
+       spkforms = np.array(spkforms) 
+       p = np.array(p)
+       #get descriptor information
+       base = dataFileName[:dataFileName.rfind('_')]
+       descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
+       if not os.path.isfile(descriptorFile):
+            #sometimes the descriptor is located one level up
+            descriptorFile = '../%s' % (descriptorFile,)
+       descriptor = fr.readDescriptor(descriptorFile)
+       channels = np.where(descriptor['gr_nr']==group)[0]
+       nchs = sum(descriptor['gr_nr']>0)
+       """
+       #here it becomes tricky; if the combined data file has already been
+       #reordered, we need to get the channels in the reordering scheme
+       reorder = np.loadtxt('reorder.txt',dtype=np.uint16)
+       channels = np.where(np.lib.arraysetops.in1d(reorder,channels))[0]
+       #compute covariance matrix on the full dataset
+
+    
+       #spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+        """
+       #gather all files to compute covariance matrix
+       if descriptorFile[:2] == '..':
+          files = glob.glob('../*_highpass.[0-9]*')
+       else:
+          files = glob.glob('*_highpass.[0-9]*')
+
+       sizes =  [os.stat(f).st_size for f in files]
+       total_size = ((np.array(sizes)-73)/2/nchs).sum()
+       alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
+       offset = 0
+       for f in files:
+           data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
+           alldata[:,offset:offset+data.shape[0]] = data[:,channels].T
+           offset+=data.shape[0]
+        
+       cinv = np.linalg.pinv(np.cov(alldata))
+       winlen = alldata.shape[1]
+       dataFile = h5py.File('%sg%.4d.hdf5' %(base,group),'a')
+       dataFile['cinv'] = cinv
+       
+       dataFile.create_group('spikeFormsAll')
+       dataFile['spikeFormsAll']['spikeForms'] = spkforms
+       dataFile['spikeFormsAll']['p'] = p 
+       dataFile.flush()
+       #remove small waveforms
+       spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
+       if len(spkforms)>0:
+           dataFile.create_group('spikeFormsLarge')
+           dataFile['spikeFormsLarge']['spikeForms'] = spkforms
+           dataFile['spikeFormsLarge']['p'] = p
+
+       if len(spkforms)>1:
+           spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+           if len(spkforms)>0:
+               dataFile['spikeForms'] = spkforms
+               dataFile['p'] = p
+       dataFile.close()
+
+    else:
+        spkforms,p = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,debug=False,chunksize=chunkSize)
 
