@@ -16,8 +16,8 @@
 
 function mlseq = hmm_decode(filename, patchlength, p,varargin)
 
-Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','');
-Args.flags = {'save'};
+Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0);
+Args.flags = {'save','hdf5'};
 [Args,varargin] = getoptargs(varargin,Args);
 addpath helper_functions
 % specify file to sort, should consist of:
@@ -25,7 +25,18 @@ addpath helper_functions
 % data      DxT array, data to sort
 % spkform   N-dimensional cell of DxK spike templates
 % cinv      inverse of the covariance of the model
-load([filename '.mat'])
+if ~Args.hdf5
+	load([filename '.mat'])
+else
+	spkforms = hdf5read([filename '.hdf5'],'/spikeForms');
+	%need to permute
+	spkforms = permute(spkforms,[3,2,1]);
+	for i=1:size(spkforms,1)
+		spkform{i} = squeeze(spkforms(i,:,:));
+	end
+	%p = hdf5read([filename '.hdf5'],'/p');
+	cinv = hdf5read([filename '.hdf5'],'/cinv');
+end
 if ~isempty(Args.SourceFile)
 	header = ReadUEIFile('Filename',Args.SourceFile,'Header');
 	if header.headerSize == 73
@@ -34,7 +45,7 @@ if ~isempty(Args.SourceFile)
 		fclose(fid);
 	end
 	M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
-	if header.numChannels > size(data,1) 
+	if header.numChannels > size(spkform{1},1) 
 		if ischar(Args.Channels)
 			Args.Channels = str2num(Args.Channels);
 		end
@@ -101,7 +112,7 @@ if Args.save
 			Args.Group = descriptor.group(descriptor.channel==Args.Channels(1));
 		end
 		nparts = strsplit(Args.SourceFile,'.');
-		fname = sprintf('%sg%.4d.%.4d.mat',Args.SourceFile(1:idx-2),Args.Group,str2num(nparts{end}));
+		fname = sprintf('hmmsort/%sg%.4d.%.4d.mat',Args.SourceFile(1:idx-2),Args.Group,str2num(nparts{end}));
 		disp(['Saving data to file ' fname '...']);
 		%if exist(fname)
 		save(fname,'mlseq','spikeForms');
