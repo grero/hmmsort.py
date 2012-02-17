@@ -28,11 +28,11 @@ addpath helper_functions
 if ~Args.hdf5
 	load([filename '.mat'])
 else
-	spkforms = hdf5read([filename '.hdf5'],'/spikeForms');
+	spikeForms = hdf5read([filename '.hdf5'],'/spikeForms');
 	%need to permute
-	spkforms = permute(spkforms,[3,2,1]);
-	for i=1:size(spkforms,1)
-		spkform{i} = squeeze(spkforms(i,:,:));
+	spikeForms = permute(spikeForms,[3,2,1]);
+	for i=1:size(spikeForms,1)
+		spkform{i} = squeeze(spikeForms(i,:,:));
 	end
 	%p = hdf5read([filename '.hdf5'],'/p');
 	cinv = hdf5read([filename '.hdf5'],'/cinv');
