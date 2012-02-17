@@ -103,6 +103,8 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         if outfile == None:
             name,ext = os.path.splitext(dataFile)
             name.replace('_highpass','')
+            if not os.path.isdir('hmmsort'):
+                os.mkdir('hmmsort')
             outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
         outf = h5py.File(outfile,'a')
     for i in xrange(nchunks):
@@ -116,11 +118,12 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
             if save and len(sp)>0:
                 try:
                     outf.create_group('chunk%d' %(i,))
+                    outf['chunk%d' %(i,)]['spikeForms'] = sp
+                    outf['chunk%d' %(i,)]['p'] = pp 
                 except:
                     pass
-                outf['chunk%d' %(i,)]['spikeForms'] = sp
-                outf['chunk%d' %(i,)]['p'] = pp 
-                outf.flush()
+                finally:
+                    outf.flush()
         except:
             continue
     spkforms = np.array(spkforms)
@@ -132,11 +135,17 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
     if spkforms.shape[0]>=1:
         if save:
-            outf['spikeForms'] = spkforms
-            outf['p'] = p
-            outf.close()
+            try:
+                outf['spikeForms'] = spkforms
+                outf['p'] = p
+            except:
+                pass
     else:
         print "No spikeforms found"
+
+    #make sure we close the file
+    if save:
+        outf.close()
 
 
     return spkforms,p
@@ -268,7 +277,8 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         g[0,0] = 1
         b[0] = 1
         #compute probabilities  
-        #TODO: This step can get very memory intensive
+        #note that we are looping over number of states here; the most we are
+        #creating is 2Xdata.nbytes
         for i in xrange(W.shape[1]):
             X = W[:,i][:,None] - data.T.astype(np.float)
             fit[i,:] = np.exp(-0.5*(X*np.dot(c,X)).sum(0))
@@ -307,7 +317,11 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
             g[:,t] = g[:,t]*b
         
         g = g/(g.sum(0)+tiny)[None,:]
-        W = np.dot(data.T,g.T)/g.sum(1)[None,:]
+        #TODO: This stop could be quite memory intensive
+        #W = np.dot(data.T,g.T)/g.sum(1)[None,:]
+        W = np.zeros(W.shape)
+        for i in xrange(data.shape[0]):
+            W+=data[i,:][:,None]*g[:,i]
         W[:,0] = 0
         p = g[1::(spklength-1),:].sum(1).T/winlength
         cinv = np.linalg.pinv(np.cov((data-np.dot(g.T,W.T)).T))
