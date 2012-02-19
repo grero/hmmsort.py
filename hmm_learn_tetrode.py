@@ -24,6 +24,8 @@ np.seterr(all='warn')
 #only raise an error if we are dividing by zero; this usually means we made a
 #mistake somewhere
 np.seterr(divide='raise')
+if os.path.isdir('/Volumes/Chimera/tmp'):
+    tempfile.tempdir = '/Volumes/Chimera/tmp'
 
 def forward(g,P,spklength,N,winlength,p):
 
@@ -262,7 +264,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         W[:,1+(spklength-1)*i:(i+1)*(spklength-1)] = spkform[i,:,1:]
    """ 
     g = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
-    fit = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
+    #fit = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
     #this is an index vector
     q = np.concatenate(([N*(spklength-1)],np.arange(N*(spklength-1))),axis=0)
     tiny = np.exp(-700)
@@ -279,18 +281,15 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         #compute probabilities  
         #note that we are looping over number of states here; the most we are
         #creating is 2Xdata.nbytes
+        """
         for i in xrange(W.shape[1]):
             X = W[:,i][:,None] - data.T.astype(np.float)
             fit[i,:] = np.exp(-0.5*(X*np.dot(c,X)).sum(0))
             #remove X
             del X
+        """
         #X = W[:,:,None]-data.T[:,None,:]
         #fit = np.exp(-0.5*(X*np.dot(c,X.transpose((1,0,2))).sum(0)).sum(0))
-        """
-        for t in xrange(winlength):
-            a = W-data[t,:][None,:].repeat(N*spklength,1)
-            fit[:,t] = np.exp(-0.5*a.sum(1))*np.dot(c,a.T)
-        """
         #F = np.array(fit.tolist()).reshape(fit.shape)
         #G = forward(g,F,spklength,N,winlength,p)
         #g = np.zeros((N*(spklength-1)+1,winlength))
@@ -299,17 +298,23 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         print "Running forward algorithm..."
         sys.stdout.flush()
         for t in xrange(1,winlength):
+            x = W-data[t,:][:,None]
+            f = np.exp(-0.5*(x*np.dot(c,x)).sum(0))
             g[:,t] = g[q,t-1]
             g[0,t] = g[1:2+(N-1)*(spklength-1):(spklength-1),t].sum() + g[0,t] - g[0,t-1]*p.sum()
             g[1:2+(N-1)*(spklength-1):(spklength-1),t] = g[0,t-1]*p
-            g[:,t] = g[:,t]*fit[:,t]
+            #g[:,t] = g[:,t]*fit[:,t]
+            g[:,t] = g[:,t]*f[:]
             g[:,t] = g[:,t]/(g[:,t].sum()+tiny)
 
         #backward
         print "Running backward algorithm..."
         sys.stdout.flush()
         for t in xrange(winlength-2,-1,-1):
-            b = b*fit[:,t+1]
+            x = W-data[t+1,:][:,None]
+            f = np.exp(-0.5*(x*np.dot(c,x)).sum(0))
+            #b = b*fit[:,t+1]
+            b = b*f[:]
             b[q] = b
             b[0] = (1-p.sum())*b[-1] + np.dot(p,b[:(N-1)*(spklength-1)+1:(spklength-1)].T)
             b[(spklength-1):1+(N-1)*(spklength-1):(spklength-1)] = b[-1]
@@ -322,6 +327,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         W = np.zeros(W.shape)
         for i in xrange(data.shape[0]):
             W+=data[i,:][:,None]*g[:,i]
+        W = W/g.sum(1)[None,:]
         W[:,0] = 0
         p = g[1::(spklength-1),:].sum(1).T/winlength
         cinv = np.linalg.pinv(np.cov((data-np.dot(g.T,W.T)).T))
@@ -358,7 +364,200 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
             plt.plot(x.T,spkform[j].T)
         plt.draw()    
 
-    del g,fit 
+    #del g,fit 
+    del g 
+    for j in xrange(len(spkform)):
+        spkform[j,:,:-1] = np.concatenate((W[:,1][:,None], W[:,j*(spklength-1)+1:(j+1)*(spklength-1)]),axis=1)
+    
+    return data,spkform,p,cinv
+
+def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,chunksize=10000,debug=False):
+
+    if spkform == None:
+        neurons = 8
+        levels = 4
+        amp = np.random.random(size=(neurons,levels,))
+        amp = amp/amp.max(1)[:,None]
+        spkform = np.concatenate((np.zeros((levels,12)),np.sin(np.linspace(0,3*np.pi,states-42))[None,:].repeat(levels,0),np.zeros((levels,30))),axis=1)[None,:,:]*amp[:,:,None]*(np.median(np.abs(data),axis=0)/0.6745)[None,:,None]
+        #spkform = spkform[None,:,:].repeat(8,0)
+    else:
+        neurons,levels,spklength = spkform.shape
+    x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
+    if debug:
+        for j in xrange(neurons):
+            plt.subplot(neurons,1,j+1)
+            plt.plot(x.T,spkform[j].T)
+        plt.draw()
+    N = len(spkform)
+    if cinv == None:
+        c = np.linalg.pinv(np.cov(data.T))
+    else:
+        c = cinv
+    if p == None:
+        p = 1.e-8*np.ones((N,))
+    else:
+        if len(p) < len(spkform):
+            p = p.repeat(N,0)
+
+    if splitp == None:
+        splitp = 3.0/40000
+
+    """
+    if p.shape[0] > p.shape[1]:
+        p = p.T
+    """
+    p_reset = p
+    
+    winlength,dim = data.shape
+    spklength = spkform.shape[-1]
+    #W = np.zeros((dim,N*(spklength-1)+1))
+    W = spkform[:,:,1:].transpose((1,0,2)).reshape(dim,N*(spklength-1))
+    W = np.concatenate((np.zeros((dim,1)),W),axis=1)
+    """
+    for i in xrange(N):
+        W[:,1+(spklength-1)*i:(i+1)*(spklength-1)] = spkform[i,:,1:]
+   """ 
+    #g = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
+    #fit = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
+    #this is an index vector
+    q = np.concatenate(([N*(spklength-1)],np.arange(N*(spklength-1))),axis=0)
+    tiny = np.exp(-700)
+    nchunks = int(np.ceil(1.0*data.shape[0]/chunksize))
+    chunks = np.append(np.arange(0,data.shape[0],chunksize),[data.shape[0]])
+    chunksizes = np.diff(chunks)
+    nchunks = len(chunksizes)
+    for bw in xrange(iterations):
+        fid = tempfile.TemporaryFile()
+        p = p_reset
+        #g = np.zeros((N*(spklength-1)+1,winlength))
+        g = np.zeros((N*(spklength-1)+1,chunksize))
+        #fit = np.zeros(g.shape)
+        b = np.zeros((g.shape[0],))
+        g[0,0] = 1
+        b[0] = 1
+        #compute probabilities  
+        #note that we are looping over number of states here; the most we are
+        #creating is 2Xdata.nbytes
+        """
+        for i in xrange(W.shape[1]):
+            X = W[:,i][:,None] - data.T.astype(np.float)
+            fit[i,:] = np.exp(-0.5*(X*np.dot(c,X)).sum(0))
+            #remove X
+            del X
+        """
+        #X = W[:,:,None]-data.T[:,None,:]
+        #fit = np.exp(-0.5*(X*np.dot(c,X.transpose((1,0,2))).sum(0)).sum(0))
+        #F = np.array(fit.tolist()).reshape(fit.shape)
+        #G = forward(g,F,spklength,N,winlength,p)
+        #g = np.zeros((N*(spklength-1)+1,winlength))
+        #g[0,0] = 1
+        #forward
+        print "Running forward algorithm..."
+        sys.stdout.flush()
+        #do this in chunks
+        for i in xrange(nchunks):
+            print "Analyzing chunk %d of %d" % (i+1,nchunks) 
+            for t in xrange(1,chunksizes[i]):
+                a = chunks[i]+t
+                y = W-data[a,:][:,None]
+                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))
+                g[:,t] = g[q,t-1]
+                g[0,t] = g[1:2+(N-1)*(spklength-1):(spklength-1),t].sum() + g[0,t] - g[0,t-1]*p.sum()
+                g[1:2+(N-1)*(spklength-1):(spklength-1),t] = g[0,t-1]*p
+                #g[:,t] = g[:,t]*fit[:,t]
+                g[:,t] = g[:,t]*f[:]
+                g[:,t] = g[:,t]/(g[:,t].sum()+tiny)
+            #store to file and reset for the next chunk
+            g=g[:,:chunksizes[i]]
+            g.tofile(fid)
+            g[:,0] = g[:,-1]
+
+        #backward
+        print "Running backward algorithm..."
+        sys.stdout.flush()
+        G = np.zeros((g.shape[0],)) 
+        for i in xrange(nchunks-1,-1,-1):
+            print "Analyzing chunk %d of %d" % (i+1,nchunks) 
+            a = chunks[i]*(N*(spklength-1)+1)
+            fid.seek(a*g[0,0].nbytes,0)
+            g = np.fromfile(fid,dtype=np.float,count=(N*(spklength-1)+1)*chunksizes[i])
+            g = g.reshape(N*(spklength-1)+1,chunksizes[i])
+            for t in xrange(chunksizes[i]-2,-1,-1):
+                a = chunks[i]+t+1
+                y = W-data[a,:][:,None]
+                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))
+                #b = b*fit[:,t+1]
+                b = b*f[:]
+                b[q] = b
+                b[0] = (1-p.sum())*b[-1] + np.dot(p,b[:(N-1)*(spklength-1)+1:(spklength-1)].T)
+                b[(spklength-1):1+(N-1)*(spklength-1):(spklength-1)] = b[-1]
+                b = b/(b.sum()+tiny)
+                g[:,t] = g[:,t]*b
+            g = g/(g.sum(0)+tiny)
+            G+=g.sum(1)
+            #rewind file
+            fid.seek(-(N*(spklength-1)+1)*chunksizes[i]*g[0,0].nbytes,1)
+            g.tofile(fid)
+        
+        #g = g/(g.sum(0)+tiny)[None,:]
+        #TODO: This stop could be quite memory intensive
+        #W = np.dot(data.T,g.T)/g.sum(1)[None,:]
+        W = np.zeros(W.shape)
+        fid.seek(0)
+        for i in xrange(nchunks):
+            g = np.fromfile(fid,dtype=np.float,count=(N*(spklength-1)+1)*chunksizes[i]).reshape(N*(spklength-1)+1,chunksizes[i])
+            W+=np.dot(data[chunks[i]:chunks[i+1],:].T,g.T)
+        W = W/G[None,:]
+        W[:,0] = 0
+        p = np.zeros((N,))
+        fid.seek(0)
+        D = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=data.shape,mode='w+')
+        for i in xrange(nchunks):
+            g = np.fromfile(fid,dtype=np.float,count=(N*(spklength-1)+1)*chunksizes[i])
+            g = g.reshape(N*(spklength-1)+1,chunksizes[i])
+            p+= g[1::(spklength-1),:].sum(1)
+            fid.seek(g.nbytes,0)
+            D[chunks[i]:chunks[i+1],:] = (W[:,:,None]*g[None,:,:]).sum(1).T
+        fid.close() 
+        p=p/winlength
+        
+        cinv = np.linalg.pinv(np.cov((data-D).T))
+       
+        maxamp = np.zeros((len(spkform),))
+        for j in xrange(len(spkform)):
+            spkform[j] = np.concatenate((W[:,0][:,None],W[:,j*(spklength-1)+1:(j+1)*(spklength-1)+1]),axis=1)
+            maxamp[j] = (spkform[j]*(np.dot(cinv,spkform[j]))).sum(0).max(0)
+
+        nspikes = p*winlength
+
+        print "Spikes found per template: " 
+        print ' '.join((map(lambda s: '%.2f' %s,nspikes)))
+        sys.stdout.flush()
+        if dosplit:
+            for i in xrange(len(spkform)):
+                if p[i] < splitp:
+                    try:
+                        j = np.where((p>=np.median(p))*(p > splitp*4)*(maxamp>10))[0]
+                        j = j[np.random.random_integers(size=(1,1,len(j)))]
+                        W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength-1)+1:j*(spklength-1)]*.98
+                        p[i] = p[j]/2
+                        p[j] =p[j]/2
+                        print "Waveformsupdate: %d <- %d" % (i,j)
+                        sys.stdout.flush()
+                        break
+                    except:
+                        print "Clustersplitting failed"
+                        sys.stdout.flush()
+
+        if debug:
+            for j in xrange(len(spkform)):
+                plt.subplot(len(spkform),1,j+1)
+                plt.gca().clear()
+                plt.plot(x.T,spkform[j].T)
+            plt.draw()    
+
+    #del g,fit 
+    del g 
     for j in xrange(len(spkform)):
         spkform[j,:,:-1] = np.concatenate((W[:,1][:,None], W[:,j*(spklength-1)+1:(j+1)*(spklength-1)]),axis=1)
     
@@ -568,8 +767,10 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1):
     else:
         tmp = spkform.shape[-1]
         test = np.zeros((500,))
+        #pick some random patches
+        idx = np.random.random_integers(0,data.shape[0]-spkform.shape[-1],size=(500,))
         for i in xrange(500):
-            x = data[i*tmp:(i+1)*tmp,:].T
+            x = data[idx[i]:idx[i]+spkform.shape[-1],:].T
             test[i] = (x*np.dot(cinv,x)).sum()
         limit = np.median(test)
     
