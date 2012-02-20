@@ -78,7 +78,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
 
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
-        return
+        return [],[],[]
     
     #channels is the 3rd argument
     fid = open(dataFile,'r')
@@ -137,12 +137,13 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         if spkforms.shape[0]>=2:
             spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
     else:
-        spkforms,p = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2)
+        spkforms,p,cinv = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2)
     if spkforms.shape[0]>=1:
         if save:
             try:
                 outf['spikeForms'] = spkforms
                 outf['p'] = p
+                outf['cinv'] = cinv
             except:
                 pass
     else:
@@ -153,7 +154,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         outf.close()
 
 
-    return spkforms,p
+    return spkforms,p,cinv
 
 def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,**kwargs):
     """ 
@@ -191,11 +192,11 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
     if len(spkform)==0:
         print "No spikeforms remain after removing those compatible with noise"
-        return spkform,p
+        return spkform,p,cinv
     spkform,p = removeSparse(spkform,p,splitp)
     if len(spkform)==0:
         print "No spikeforms remain after removing templates that fire too sparsely"
-        return spkform,p
+        return spkform,p,cinv
     if debug:
         plt.gca().clear()
         x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
@@ -912,5 +913,5 @@ if __name__ == '__main__':
        dataFile.close()
 
     else:
-        spkforms,p = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug)
+        spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug)
 
