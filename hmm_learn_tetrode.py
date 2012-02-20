@@ -913,5 +913,9 @@ if __name__ == '__main__':
        dataFile.close()
 
     else:
-        spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug)
+        try:
+            spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug)
+        except IOError:
+            print "Could not read/write to file"
+            sys.exit(99)
 
