@@ -131,13 +131,13 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
                 continue
         spkforms = np.array(spkforms)
         p = np.array(p)
+        #spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
+       
+        #combine spkforms from both chunks
+        if spkforms.shape[0]>=2:
+            spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
     else:
         spkforms,p = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2)
-    #spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
-   
-    #combine spkforms from both chunks
-    if spkforms.shape[0]>=2:
-        spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
     if spkforms.shape[0]>=1:
         if save:
             try:
@@ -188,7 +188,14 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
 
 
     data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,**kwargs)
+    spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
+    if len(spkform)==0:
+        print "No spikeforms remain after removing those compatible with noise"
+        return spkform,p
     spkform,p = removeSparse(spkform,p,splitp)
+    if len(spkform)==0:
+        print "No spikeforms remain after removing templates that fire too sparsely"
+        return spkform,p
     if debug:
         plt.gca().clear()
         x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
@@ -819,7 +826,7 @@ if __name__ == '__main__':
     
     import getopt
 
-    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize='])
+    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug'])
 
     opts = dict(opts)
 
@@ -827,7 +834,9 @@ if __name__ == '__main__':
     outFileName = opts.get('--outFile')
     group = int(opts.get('--group','1'))
     splitp = np.float(opts.get('--minFiringRate','0.5'))
-    chunkSize = min(np.float(opts.get('--chunkSize','1.5e6')),1.5e6)
+    chunkSize = min(np.float(opts.get('--chunkSize','50000')),1.0e6)
+    version = int(opts.get('--version','2'))
+    debug = opts.has_key('--debug')
     if '--combine' in opts:
        #get all the data file, read the spkforms from each, then combine them 
        files = opts.get('--sourceFile','').split(',')
@@ -903,5 +912,5 @@ if __name__ == '__main__':
        dataFile.close()
 
     else:
-        spkforms,p = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,debug=False,chunksize=chunkSize)
+        spkforms,p = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug)
 
