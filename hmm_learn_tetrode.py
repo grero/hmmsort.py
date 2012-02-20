@@ -74,7 +74,7 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,**kwargs):
+def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,**kwargs):
 
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
@@ -95,12 +95,6 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
     descriptor = fr.readDescriptor(descriptorFile)
     channels = np.where(descriptor['gr_nr']==group)[0]
     cdata = data[:,channels]
-    #compute the covariance matrix of the full data
-    cinv = np.linalg.pinv(np.cov(cdata.T))
-    #divide file into two chunks
-    nchunks = int(np.ceil(1.0*cdata.shape[0]/chunksize))
-    spkforms = []
-    p = []
     if save:
         if outfile == None:
             name,ext = os.path.splitext(dataFile)
@@ -109,27 +103,36 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
                 os.mkdir('hmmsort')
             outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
         outf = h5py.File(outfile,'a')
-    for i in xrange(nchunks):
-        print "Processing chunk %d of %d..." % (i+1,nchunks)
-        sys.stdout.flush()
-        try:
-            sp,pp,_ = learnTemplates(cdata[i*chunksize:(i+1)*chunksize,:],samplingRate = sampling_rate,**kwargs)
+    if version == 1:
+        #compute the covariance matrix of the full data
+        cinv = np.linalg.pinv(np.cov(cdata.T))
+        #divide file into two chunks
+        nchunks = int(np.ceil(1.0*cdata.shape[0]/chunksize))
+        spkforms = []
+        p = []
+        for i in xrange(nchunks):
+            print "Processing chunk %d of %d..." % (i+1,nchunks)
+            sys.stdout.flush()
+            try:
+                sp,pp,_ = learnTemplates(cdata[i*chunksize:(i+1)*chunksize,:],samplingRate = sampling_rate,**kwargs)
 
-            spkforms.extend(sp) 
-            p.extend(pp)
-            if save and len(sp)>0:
-                try:
-                    outf.create_group('chunk%d' %(i,))
-                    outf['chunk%d' %(i,)]['spikeForms'] = sp
-                    outf['chunk%d' %(i,)]['p'] = pp 
-                except:
-                    pass
-                finally:
-                    outf.flush()
-        except:
-            continue
-    spkforms = np.array(spkforms)
-    p = np.array(p)
+                spkforms.extend(sp) 
+                p.extend(pp)
+                if save and len(sp)>0:
+                    try:
+                        outf.create_group('chunk%d' %(i,))
+                        outf['chunk%d' %(i,)]['spikeForms'] = sp
+                        outf['chunk%d' %(i,)]['p'] = pp 
+                    except:
+                        pass
+                    finally:
+                        outf.flush()
+            except:
+                continue
+        spkforms = np.array(spkforms)
+        p = np.array(p)
+    else:
+        spkforms,p = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2)
     #spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
    
     #combine spkforms from both chunks
@@ -152,7 +155,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
 
     return spkforms,p
 
-def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,**kwargs):
+def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,**kwargs):
     """ 
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -177,7 +180,14 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,**kw
     if save:
         #open a file to save the spkforms to
         pass
-    data,spkform,p,cinv = learndbw1(data,iterations=1)
+    #version 2 uses chunking more aggressively, and does not make heavy use of memory maps
+    if version==2:
+        learnf = learndbw1v2
+    else:
+        learnf = learndbw1
+
+
+    data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,**kwargs)
     spkform,p = removeSparse(spkform,p,splitp)
     if debug:
         plt.gca().clear()
@@ -188,6 +198,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,**kw
             plt.plot(x.T,spkform[i].T)
         if save:
             plt.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/learn_example_init.pdf'),bbox='tight')
+        else:
+            plt.draw()
     #combine templates
     spkform,p = combineSpikes(spkform,p,cinv,data.shape[0])
     if debug:
@@ -197,29 +209,38 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,**kw
             plt.plot(x.T,spkform[i].T)
         if save:
             plt.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/learn_example_combined.pdf'),bbox='tight')
+        else:
+            plt.draw()
         
-    #learn some more
-    data,spkform,p,cinv = learndbw1(data,spkform,iterations=2,cinv=cinv,p=p)
-    #remove sparse waveforms
-    spkform,p = removeSparse(spkform,p,splitp)
-    if debug:
-        plt.gcf().clear()
-        for i in xrange(spkform.shape[0]):
-            plt.subplot(spkform.shape[0],1,i+1)
-            plt.plot(x.T,spkform[i].T)
-        if save:
-            plt.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/learn_example_final.pdf'),bbox='tight')
+    if len(spkform)>0:
+        #learn some more
+        data,spkform,p,cinv = learnf(data,spkform,iterations=2,cinv=cinv,p=p,**kwargs)
+        #remove sparse waveforms
+        if len(spkform)>0:
+            spkform,p = removeSparse(spkform,p,splitp)
+        if debug:
+            plt.gcf().clear()
+            for i in xrange(spkform.shape[0]):
+                plt.subplot(spkform.shape[0],1,i+1)
+                plt.plot(x.T,spkform[i].T)
+            if save:
+                plt.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/learn_example_final.pdf'),bbox='tight')
+            else:
+                plt.draw()
 
-    #remove spikes that are too small
-    spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
-    print "Included because of sigma: "
-    s = ['%d ' %(i,) for i in idx]
-    print s
+        #remove spikes that are too small
+        if len(spkform)>0:
+            spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
+            print "Included because of sigma: "
+            s = ['%d ' %(i,) for i in idx]
+            print s
     return spkform,p,cinv
 
 
-def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60):
-
+def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,**kwargs):
+    """
+    The function runs the baum-welch algorithm on the specified data. Data shauld have dimensions of datapts X channels
+    """
     if spkform == None:
         neurons = 8
         levels = 4
@@ -371,7 +392,10 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
     
     return data,spkform,p,cinv
 
-def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,chunksize=10000,debug=False):
+def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,chunksize=10000,debug=False,**kwargs):
+    """
+    This function runs the baum-welch algorithm on the specified data, learning spiking templates. The input data should have dimensions of datapts X channels. This code runs on the data in chunks, offloading data to disk when not in use. This allows it to analyse arbitrarily long sequences of data.
+    """
 
     if spkform == None:
         neurons = 8
