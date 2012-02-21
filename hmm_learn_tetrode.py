@@ -92,7 +92,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         fid.seek(4,0)
         sampling_rate = np.fromfile(fid,dtype=np.uint32,count=1).astype(np.float)
         channels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
-    sampling_rate = min(30000.0,sampling_Rate)
+    sampling_rate = min(30000.0,sampling_rate)
     
     fid.close()
 
@@ -114,7 +114,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
             name.replace('_highpass','')
             if not os.path.isdir('hmmsort'):
                 os.mkdir('hmmsort')
-            if fileChunkId != None:
+            if fileChunkId == None:
                 outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
             else:
                 outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
@@ -939,12 +939,12 @@ if __name__ == '__main__':
         #check for the presence of an SGE_TASK_ID
         tid = None
         nchunks = None
-        if 'TASK_ID' in os.environ:
+        if 'SGE_TASK_ID' in os.environ:
             #signifies that we should use split the file
-            tfirst = os.environ.get('TASK_FIRST_ID',0)
-            tlast = os.environ.get('TASK_LAST_ID',0)
-            nchunks = tifrst-tlast+1
-            tid = os.environ['TASK_ID']-1
+            tfirst = os.environ.get('SGE_TASK_FIRST_ID',0)
+            tlast = os.environ.get('SGE_TASK_LAST_ID',0)
+            nchunks = tfrst-tlast+1
+            tid = os.environ['SGE_TASK_ID']-1
             print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid)
             sys.stdout.flush()
             
