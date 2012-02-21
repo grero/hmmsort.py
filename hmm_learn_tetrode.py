@@ -9,6 +9,7 @@ import tempfile
 import os
 import h5py
 import glob
+import traceback
 import fileReaders as fr
 import scipy.interpolate as interpolate
 
@@ -518,7 +519,17 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 g[:,t] = g[:,t]/(g[:,t].sum()+tiny)
             #store to file and reset for the next chunk
             g=g[:,:chunksizes[i]]
-            g.tofile(fid)
+            try:
+                g.tofile(fid)
+            except ValueError:
+                """
+                for some reason, sometimes we get a value error here. If that
+                happens, just report the exception and let sge know an error
+                occured
+                """
+                traceback.print_exec(file=sys.stdout)
+                sys.exit(99)
+
             g[:,0] = g[:,-1]
 
         #backward
@@ -941,11 +952,11 @@ if __name__ == '__main__':
         nchunks = None
         if 'SGE_TASK_ID' in os.environ:
             #signifies that we should use split the file
-            tfirst = os.environ.get('SGE_TASK_FIRST_ID',0)
-            tlast = os.environ.get('SGE_TASK_LAST_ID',0)
-            nchunks = tfrst-tlast+1
-            tid = os.environ['SGE_TASK_ID']-1
-            print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid)
+            tfirst = int(os.environ.get('SGE_TASK_FIRST',0))
+            tlast = int(os.environ.get('SGE_TASK_LAST',0))
+            nchunks = tlast-tfirst+1
+            tid = int(os.environ['SGE_TASK_ID'])-1
+            print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid+1)
             sys.stdout.flush()
             
         try:
