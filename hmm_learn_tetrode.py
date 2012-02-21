@@ -74,7 +74,7 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,**kwargs):
+def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,**kwargs):
 
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
@@ -84,7 +84,15 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
     fid = open(dataFile,'r')
     header_size = np.fromfile(fid,dtype=np.uint32,count=1)
     channels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
-    sampling_rate = min(30000.0,np.fromfile(fid,dtype=np.uint32,count=1)).astype(np.float)
+    sampling_rate = np.fromfile(fid,dtype=np.uint32,count=1).astype(np.float)
+    #check whether the sampling rate is out of whack; if so, we try changing
+    #the order
+    if sampling_rate > 1e5:
+        #rewind to read the information again
+        fid.seek(4,0)
+        sampling_rate = np.fromfile(fid,dtype=np.uint32,count=1).astype(np.float)
+        channels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
+    sampling_rate = min(30000.0,sampling_Rate)
     
     fid.close()
 
@@ -95,13 +103,22 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
     descriptor = fr.readDescriptor(descriptorFile)
     channels = np.where(descriptor['gr_nr']==group)[0]
     cdata = data[:,channels]
+    if nFileChunks!=None and fileChunkId!=None:
+        #we should only process parts of the file
+        fileChunkSize = np.ceil(1.0*cdata.shape[0]/nFileChunks)
+    
+        cdata = cdata[fileChunkId*fileChunkSize:(fileChunkId+1)*fileChunkSize,:]
     if save:
         if outfile == None:
             name,ext = os.path.splitext(dataFile)
             name.replace('_highpass','')
             if not os.path.isdir('hmmsort'):
                 os.mkdir('hmmsort')
-            outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
+            if fileChunkId != None:
+                outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
+            else:
+                outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
+
         outf = h5py.File(outfile,'a')
     if version == 1:
         #compute the covariance matrix of the full data
@@ -919,8 +936,20 @@ if __name__ == '__main__':
             dataFile.close()
 
     else:
+        #check for the presence of an SGE_TASK_ID
+        tid = None
+        nchunks = None
+        if 'TASK_ID' in os.environ:
+            #signifies that we should use split the file
+            tfirst = os.environ.get('TASK_FIRST_ID',0)
+            tlast = os.environ.get('TASK_LAST_ID',0)
+            nchunks = tifrst-tlast+1
+            tid = os.environ['TASK_ID']-1
+            print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid)
+            sys.stdout.flush()
+            
         try:
-            spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug)
+            spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid)
         except IOError:
             print "Could not read/write to file"
         sys.exit(99)
