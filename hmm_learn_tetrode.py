@@ -839,83 +839,89 @@ if __name__ == '__main__':
     version = int(opts.get('--version','2'))
     debug = opts.has_key('--debug')
     if '--combine' in opts:
-       #get all the data file, read the spkforms from each, then combine them 
-       files = opts.get('--sourceFile','').split(',')
-       dataFileName = files[0]
-       spkforms = []
-       p = []
-       for f in files:
-           try:
-               dataFile = h5py.File(f,'r')
-               spkforms.extend(dataFile['spikeForms'][:])
-               p.extend(dataFile['p'][:])
-               dataFile.close()
-           except:
-               continue
+#get all the data file, read the spkforms from each, then combine them 
+        if dataFileName == None:
+            pass
+        else:
+            files = opts.get('--sourceFile','').split(',')
+        dataFileName = files[0]
+        spkforms = []
+        p = []
+        for f in files:
+            try:
+                dataFile = h5py.File(f,'r')
+                spkforms.extend(dataFile['spikeForms'][:])
+                p.extend(dataFile['p'][:])
+                dataFile.close()
+            except:
+                continue
 
-       spkforms = np.array(spkforms) 
-       p = np.array(p)
-       #get descriptor information
-       base = dataFileName[:dataFileName.rfind('_')]
-       descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
-       if not os.path.isfile(descriptorFile):
-            #sometimes the descriptor is located one level up
+        spkforms = np.array(spkforms) 
+        p = np.array(p)
+#get descriptor information
+        base = dataFileName[:dataFileName.rfind('_')]
+        descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
+        if not os.path.isfile(descriptorFile):
+#sometimes the descriptor is located one level up
             descriptorFile = '../%s' % (descriptorFile,)
-       descriptor = fr.readDescriptor(descriptorFile)
-       channels = np.where(descriptor['gr_nr']==group)[0]
-       nchs = sum(descriptor['gr_nr']>0)
-       """
-       #here it becomes tricky; if the combined data file has already been
-       #reordered, we need to get the channels in the reordering scheme
-       reorder = np.loadtxt('reorder.txt',dtype=np.uint16)
-       channels = np.where(np.lib.arraysetops.in1d(reorder,channels))[0]
-       #compute covariance matrix on the full dataset
-
-    
-       #spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+        descriptor = fr.readDescriptor(descriptorFile)
+        channels = np.where(descriptor['gr_nr']==group)[0]
+        nchs = sum(descriptor['gr_nr']>0)
         """
-       #gather all files to compute covariance matrix
-       if descriptorFile[:2] == '..':
-          files = glob.glob('../*_highpass.[0-9]*')
-       else:
-          files = glob.glob('*_highpass.[0-9]*')
+#here it becomes tricky; if the combined data file has already been
+#reordered, we need to get the channels in the reordering scheme
+            reorder = np.loadtxt('reorder.txt',dtype=np.uint16)
+            channels = np.where(np.lib.arraysetops.in1d(reorder,channels))[0]
+#compute covariance matrix on the full dataset
 
-       sizes =  [os.stat(f).st_size for f in files]
-       total_size = ((np.array(sizes)-73)/2/nchs).sum()
-       alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
-       offset = 0
-       for f in files:
-           data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
-           alldata[:,offset:offset+data.shape[0]] = data[:,channels].T
-           offset+=data.shape[0]
-        
-       cinv = np.linalg.pinv(np.cov(alldata))
-       winlen = alldata.shape[1]
-       dataFile = h5py.File('%sg%.4d.hdf5' %(base,group),'a')
-       dataFile['cinv'] = cinv
-       
-       dataFile.create_group('spikeFormsAll')
-       dataFile['spikeFormsAll']['spikeForms'] = spkforms
-       dataFile['spikeFormsAll']['p'] = p 
-       dataFile.flush()
-       #remove small waveforms
-       spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
-       if len(spkforms)>0:
-           dataFile.create_group('spikeFormsLarge')
-           dataFile['spikeFormsLarge']['spikeForms'] = spkforms
-           dataFile['spikeFormsLarge']['p'] = p
 
-       if len(spkforms)>1:
-           spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
-           if len(spkforms)>0:
-               dataFile['spikeForms'] = spkforms
-               dataFile['p'] = p
-       dataFile.close()
+#spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+        """
+#gather all files to compute covariance matrix
+        if descriptorFile[:2] == '..':
+            files = glob.glob('../*_highpass.[0-9]*')
+        else:
+            files = glob.glob('*_highpass.[0-9]*')
+
+        sizes =  [os.stat(f).st_size for f in files]
+        total_size = ((np.array(sizes)-73)/2/nchs).sum()
+        alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
+        offset = 0
+        for f in files:
+            data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
+            alldata[:,offset:offset+data.shape[0]] = data[:,channels].T
+            offset+=data.shape[0]
+
+        cinv = np.linalg.pinv(np.cov(alldata))
+        winlen = alldata.shape[1]
+        dataFile = h5py.File('%sg%.4d.hdf5' %(base,group),'a')
+        try:
+            dataFile['cinv'] = cinv
+            dataFile.create_group('spikeFormsAll')
+            dataFile['spikeFormsAll']['spikeForms'] = spkforms
+            dataFile['spikeFormsAll']['p'] = p 
+            dataFile.flush()
+        except:
+#field already exists
+            pass
+#remove small waveforms
+        spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
+        if len(spkforms)>0:
+            dataFile.create_group('spikeFormsLarge')
+            dataFile['spikeFormsLarge']['spikeForms'] = spkforms
+            dataFile['spikeFormsLarge']['p'] = p
+
+        if len(spkforms)>1:
+            spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+        if len(spkforms)>0:
+            dataFile['spikeForms'] = spkforms
+            dataFile['p'] = p
+            dataFile.close()
 
     else:
         try:
             spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug)
         except IOError:
             print "Could not read/write to file"
-            sys.exit(99)
+        sys.exit(99)
 
