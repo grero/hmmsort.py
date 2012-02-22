@@ -180,7 +180,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
 
     return spkforms,p,cinv
 
-def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,**kwargs):
+def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,saveToFile=False,**kwargs):
     """ 
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -210,14 +210,37 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         learnf = learndbw1v2
     else:
         learnf = learndbw1
-
-
+    if saveToFile:
+        try:
+            outFile = h5py.File(saveToFile,'a')
+        except IOError:
+            print "Could not open file %s..." %(saveToFile,)
+            saveToFile = False
+    spikeForms = {}
     data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,**kwargs)
+    spikeForms['all'] = {'spikeForms': spkform,'p': p}
+    if saveToFile:
+        outFile.create_group('all')
+        outFile['all']['spikeForms'] = spkform
+        outFile['all']['p'] = p
+        outFile.flush()
     spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
+    spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
+    if saveToFile:
+        outFile.create_group('after_noise')
+        outFile['after_noise']['spikeForms'] = spkform
+        outFile['after_noise']['p'] = p
+        outFile.flush()
     if len(spkform)==0:
         print "No spikeforms remain after removing those compatible with noise"
         return spkform,p,cinv
     spkform,p = removeSparse(spkform,p,splitp)
+    spikeForms['after_sparse'] = {'spikeForms': spkform,'p': p}
+    if saveToFile:
+        outFile.create_group('after_sparse')
+        outFile['after_sparse']['spikeForms'] = spkform
+        outFile['after_sparse']['p'] = p
+        outFile.flush()
     if len(spkform)==0:
         print "No spikeforms remain after removing templates that fire too sparsely"
         return spkform,p,cinv
@@ -234,6 +257,12 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             plt.draw()
     #combine templates
     spkform,p = combineSpikes(spkform,p,cinv,data.shape[0])
+    spikeForms['after_combine'] = {'spikeForms':spkform,'p':p}
+    if saveToFile:
+        outFile.create_group('after_combine')
+        outFile['after_combine']['spikeForms'] = spkform
+        outFile['after_combine']['p'] = p
+        outFile.flush()
     if debug:
         plt.gcf().clear()
         for i in xrange(spkform.shape[0]):
@@ -247,9 +276,22 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     if len(spkform)>0:
         #learn some more
         data,spkform,p,cinv = learnf(data,spkform,iterations=2,cinv=cinv,p=p,**kwargs)
+        spikeForms['second_learning'] = {'a': {'spikeForms':spkform,'p':p}}
+        if saveToFile:
+            outFile.create_group('second_learning')
+            outFile['second_learning']['spikeForms'] = spkform
+            outFile['second_learning']['p'] = p
+            outFile.flush()
+
         #remove sparse waveforms
         if len(spkform)>0:
             spkform,p = removeSparse(spkform,p,splitp)
+            spikeForms['second_learning']['after_sparse'] = {'spikeForms':spkform,'p':p}
+            if saveToFile:
+                outFile['second_learning'].create_group('after_sparse')
+                outFile['second_learning']['after_sparse']['spikeForms'] = spkform
+                outFile['second_learning']['after_sparse']['p'] = p
+                outFile.flush()
         if debug:
             plt.gcf().clear()
             for i in xrange(spkform.shape[0]):
@@ -263,9 +305,20 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         #remove spikes that are too small
         if len(spkform)>0:
             spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
+            if saveToFile:
+                outFile['second_learning'].create_group('after_noise')
+                outFile['second_learning']['after_noise']['spikeForms'] = spkform
+                outFile['second_learning']['after_noise']['p'] = p
+                outFile.flush()
+
+
             print "Included because of sigma: "
             s = ['%d ' %(i,) for i in idx]
             print s
+        if saveToFile:
+            outFile.close()
+            
+    return spikeForms,cinv
     return spkform,p,cinv
 
 
