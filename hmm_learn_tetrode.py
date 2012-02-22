@@ -122,8 +122,11 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
                 outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
             else:
                 outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
-
-        outf = h5py.File(outfile,'a')
+        try:
+            outf = h5py.File(outfile,'a')
+        except IOError:
+            #file exists; what do we do?
+            print 'An error occurred trying to open the file %s...' %(outfile,)
     if version == 1:
         #compute the covariance matrix of the full data
         cinv = np.linalg.pinv(np.cov(cdata.T))
@@ -858,7 +861,7 @@ if __name__ == '__main__':
     
     import getopt
 
-    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug'])
+    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','-fileChunkSize='])
 
     opts = dict(opts)
 
