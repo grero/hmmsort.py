@@ -234,7 +234,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         outFile.flush()
     spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
     spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
-    if saveToFile:
+    if saveToFile and len(p)>0:
         outFile.create_group('after_noise')
         outFile['after_noise']['spikeForms'] = spkform
         outFile['after_noise']['p'] = p
@@ -244,7 +244,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         return spkform,p,cinv
     spkform,p = removeSparse(spkform,p,splitp)
     spikeForms['after_sparse'] = {'spikeForms': spkform,'p': p}
-    if saveToFile:
+    if saveToFile and len(p)>0:
         outFile.create_group('after_sparse')
         outFile['after_sparse']['spikeForms'] = spkform
         outFile['after_sparse']['p'] = p
@@ -266,7 +266,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     #combine templates
     spkform,p = combineSpikes(spkform,p,cinv,data.shape[0])
     spikeForms['after_combine'] = {'spikeForms':spkform,'p':p}
-    if saveToFile:
+    if saveToFile and len(p)>0:
         outFile.create_group('after_combine')
         outFile['after_combine']['spikeForms'] = spkform
         outFile['after_combine']['p'] = p
@@ -285,7 +285,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         #learn some more
         data,spkform,p,cinv = learnf(data,spkform,iterations=2,cinv=cinv,p=p,**kwargs)
         spikeForms['second_learning'] = {'a': {'spikeForms':spkform,'p':p}}
-        if saveToFile:
+        if saveToFile and len(p)>0:
             outFile.create_group('second_learning')
             outFile['second_learning']['spikeForms'] = spkform
             outFile['second_learning']['p'] = p
@@ -295,7 +295,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         if len(spkform)>0:
             spkform,p = removeSparse(spkform,p,splitp)
             spikeForms['second_learning']['after_sparse'] = {'spikeForms':spkform,'p':p}
-            if saveToFile:
+            if saveToFile and len(p)>0:
                 outFile['second_learning'].create_group('after_sparse')
                 outFile['second_learning']['after_sparse']['spikeForms'] = spkform
                 outFile['second_learning']['after_sparse']['p'] = p
@@ -313,7 +313,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         #remove spikes that are too small
         if len(spkform)>0:
             spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
-            if saveToFile:
+            if saveToFile and len(p)>0:
                 outFile['second_learning'].create_group('after_noise')
                 outFile['second_learning']['after_noise']['spikeForms'] = spkform
                 outFile['second_learning']['after_noise']['p'] = p
