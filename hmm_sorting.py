@@ -768,3 +768,10 @@ def findBest3DProjection(fdata,cids):
     return bestDims[bestDimIdx]
 
 
+if __name__ == '__main__':
+
+    data = processGroups()
+    
+    #plot all groups
+    for g in data.keys():
+        plotSpikes(qdata,save=True)

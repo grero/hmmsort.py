@@ -1,5 +1,6 @@
 #!/bin/bash
-BINDIR=/opt/cluster/usr/bin/roger
+#BINDIR=/opt/cluster/usr/bin/roger
+BINDIR=/opt/cluster/tmp
 #get the groups
 #get the number of highpass files
 sortfile=hmmsort
@@ -29,7 +30,7 @@ do
 			outfiles=${outfiles}${outfile},
 			if [ ! -e $PWD/hmmsort/$outfile ]
 			then
-				jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/hmmsort/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G | awk '{print $3}'`
+				jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/hmmsort/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 | awk '{print $3}'`
 			fi
 		done
 		jobidstr=`echo ${jobid[*]} | sed -e 's/ /,/g'`
@@ -40,3 +41,5 @@ do
 
 	fi
 done
+#echo "cd $PWD; /opt/cluster/tmp/hmm_learn_tetrode.py --sourceFile tiger_p6_misc_highpass.0008 --group 4 --chunkSize=50000" | qsub -j y -V -N hmmLearng4 -l mem=5G -l s_rt=7000 -t 1-20 -o $HOME/tmp/
+
