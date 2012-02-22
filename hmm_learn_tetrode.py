@@ -80,7 +80,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
 
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
-        return [],[],[]
+        return [],[]
     
     #channels is the 3rd argument
     fid = open(dataFile,'r')
@@ -165,15 +165,15 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
             outf.close()
         else:
             outfile = False
-        spkforms,p,cinv = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2,saveToFile=outfile)
-    if spkforms.shape[0]>=1:
+        spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2,saveToFile=outfile,**kwargs)
+    if spikeForms != None and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
         if save:
             #reopen to save the last result
             outf.close()
             outf = h5py.File(outfile,'a')
             try:
-                outf['spikeForms'] = spkforms
-                outf['p'] = p
+                outf['spikeForms'] = spikeForms['second_learning']['after_sparse']['spikeForms']
+                outf['p'] = spikeForms['second_learning']['after_sparse']['p']
                 outf['cinv'] = cinv
                 outf.flush()
             except:
@@ -186,9 +186,9 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         outf.close()
 
 
-    return spkforms,p,cinv
+    return spikeForms,cinv
 
-def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,saveToFile=False,**kwargs):
+def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,saveToFile=False,redo=False,**kwargs):
     """ 
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -221,6 +221,9 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     if saveToFile:
         try:
             outFile = h5py.File(saveToFile,'a')
+            if 'all' in outFile and not redo:
+                print "Data already exists and redo was not requested. Skipping..."
+                return None,None
         except IOError:
             print "Could not open file %s..." %(saveToFile,)
             saveToFile = False
@@ -243,7 +246,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         outFile.flush()
     if len(spkform)==0:
         print "No spikeforms remain after removing those compatible with noise"
-        return spkform,p,cinv
+        return spikeForms,cinv
     spkform,p = removeSparse(spkform,p,splitp)
     spikeForms['after_sparse'] = {'spikeForms': spkform,'p': p}
     if saveToFile and len(p)>0:
@@ -254,7 +257,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         outFile.flush()
     if len(spkform)==0:
         print "No spikeforms remain after removing templates that fire too sparsely"
-        return spkform,p,cinv
+        return spikeForms,cinv
     if debug:
         plt.gca().clear()
         x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
@@ -929,7 +932,7 @@ if __name__ == '__main__':
     
     import getopt
 
-    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','-fileChunkSize='])
+    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','fileChunkSize=','redo'])
 
     opts = dict(opts)
 
@@ -940,6 +943,7 @@ if __name__ == '__main__':
     chunkSize = min(np.float(opts.get('--chunkSize','50000')),1.0e6)
     version = int(opts.get('--version','2'))
     debug = opts.has_key('--debug')
+    redo = opts.has_key('--redo')
     if '--combine' in opts:
 #get all the data file, read the spkforms from each, then combine them 
         if dataFileName == None:
@@ -1036,7 +1040,7 @@ if __name__ == '__main__':
             sys.stdout.flush()
             
         try:
-            spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid)
+            spikeForms,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid)
         except IOError:
             print "Could not read/write to file"
             sys.exit(99)
