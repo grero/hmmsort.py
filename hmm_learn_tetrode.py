@@ -876,7 +876,7 @@ def removeSparse(spkform,p,splitp):
     p = p[idx]
     return spkform,p
 
-def removeStn(spkform,p,cinv,data=None,small_thresh=1):
+def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
     """
     Remove templates that do not exceed the twice the energy of an average noise
     patch
@@ -885,10 +885,10 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1):
         limit = spkform.shape[-1]*3
     else:
         tmp = spkform.shape[-1]
-        test = np.zeros((500,))
+        test = np.zeros((nsamples,))
         #pick some random patches
-        idx = np.random.random_integers(0,data.shape[0]-spkform.shape[-1],size=(500,))
-        for i in xrange(500):
+        idx = np.random.random_integers(0,data.shape[0]-spkform.shape[-1],size=(nsamples,))
+        for i in xrange(nsamples):
             x = data[idx[i]:idx[i]+spkform.shape[-1],:].T
             test[i] = (x*np.dot(cinv,x)).sum()
         limit = np.median(test)
