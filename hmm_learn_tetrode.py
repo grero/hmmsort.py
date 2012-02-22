@@ -12,6 +12,7 @@ import glob
 import traceback
 import fileReaders as fr
 import scipy.interpolate as interpolate
+from PyNpt import extraction
 
 #use PDF backend if we are running a script
 if __name__ == '__main__':
@@ -75,7 +76,7 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain-False,**kwargs):
+def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain=False,**kwargs):
 
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
@@ -517,10 +518,8 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 g[0,t] = g[1:2+(N-1)*(spklength-1):(spklength-1),t].sum() + g[0,t] - g[0,t-1]*p.sum()
                 g[1:2+(N-1)*(spklength-1):(spklength-1),t] = g[0,t-1]*p
                 #g[:,t] = g[:,t]*fit[:,t]
-                g[:,t] = g[:,t]*f[:]
+                g[:,t] = g[:,t]*f[:] + tiny
                 g[:,t] = g[:,t]/(g[:,t].sum()+tiny)
-                if g[:,t].max()==0:
-                    raise ValueError('Something happened')
             #store to file and reset for the next chunk
             g=g[:,:chunksizes[i]]
             try:
@@ -549,14 +548,14 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             for t in xrange(chunksizes[i]-2,-1,-1):
                 a = chunks[i]+t+1
                 y = W-data[a,:][:,None]
-                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))
+                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0)) + tiny
                 #b = b*fit[:,t+1]
-                b = b*f[:]
+                b = b*f[:] + tiny
                 b[q] = b
                 b[0] = (1-p.sum())*b[-1] + np.dot(p,b[:(N-1)*(spklength-1)+1:(spklength-1)].T)
                 b[(spklength-1):1+(N-1)*(spklength-1):(spklength-1)] = b[-1]
                 b = b/(b.sum()+tiny)
-                g[:,t] = g[:,t]*b
+                g[:,t] = g[:,t]*b + tiny
             g = g/(g.sum(0)+tiny)
             G+=g.sum(1)
             #rewind file
@@ -873,6 +872,7 @@ if __name__ == '__main__':
     if '--combine' in opts:
 #get all the data file, read the spkforms from each, then combine them 
         if dataFileName == None:
+            #try to guess from the group 
             pass
         else:
             files = opts.get('--sourceFile','').split(',')
@@ -920,7 +920,8 @@ if __name__ == '__main__':
         alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
         offset = 0
         for f in files:
-            data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
+            data,sr = extraction.readDataFile(f)
+            #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
             alldata[:,offset:offset+data.shape[0]] = data[:,channels].T
             offset+=data.shape[0]
 
