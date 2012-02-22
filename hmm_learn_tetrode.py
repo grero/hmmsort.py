@@ -75,7 +75,7 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,**kwargs):
+def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain-False,**kwargs):
 
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
@@ -104,6 +104,8 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
     descriptor = fr.readDescriptor(descriptorFile)
     channels = np.where(descriptor['gr_nr']==group)[0]
     cdata = data[:,channels]
+    if divideByGain and 'gain' in descriptor:
+        cdata = cdata/np.float(descriptor['gain'])
     if nFileChunks!=None and fileChunkId!=None:
         #we should only process parts of the file
         fileChunkSize = np.ceil(1.0*cdata.shape[0]/nFileChunks)
@@ -510,13 +512,15 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             for t in xrange(1,chunksizes[i]):
                 a = chunks[i]+t
                 y = W-data[a,:][:,None]
-                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))
+                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))+tiny
                 g[:,t] = g[q,t-1]
                 g[0,t] = g[1:2+(N-1)*(spklength-1):(spklength-1),t].sum() + g[0,t] - g[0,t-1]*p.sum()
                 g[1:2+(N-1)*(spklength-1):(spklength-1),t] = g[0,t-1]*p
                 #g[:,t] = g[:,t]*fit[:,t]
                 g[:,t] = g[:,t]*f[:]
                 g[:,t] = g[:,t]/(g[:,t].sum()+tiny)
+                if g[:,t].max()==0:
+                    raise ValueError('Something happened')
             #store to file and reset for the next chunk
             g=g[:,:chunksizes[i]]
             try:
@@ -963,5 +967,5 @@ if __name__ == '__main__':
             spkforms,p,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid)
         except IOError:
             print "Could not read/write to file"
-        sys.exit(99)
+            sys.exit(99)
 
