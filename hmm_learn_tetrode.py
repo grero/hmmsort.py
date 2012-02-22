@@ -161,13 +161,21 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         if spkforms.shape[0]>=2:
             spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
     else:
-        spkforms,p,cinv = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2)
+        if save:
+            outf.close()
+        else:
+            outfile = False
+        spkforms,p,cinv = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2,saveToFile=outfile)
     if spkforms.shape[0]>=1:
         if save:
+            #reopen to save the last result
+            outf.close()
+            outf = h5py.File(outfile,'a')
             try:
                 outf['spikeForms'] = spkforms
                 outf['p'] = p
                 outf['cinv'] = cinv
+                outf.flush()
             except:
                 pass
     else:
