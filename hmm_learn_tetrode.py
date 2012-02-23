@@ -1009,12 +1009,16 @@ if __name__ == '__main__':
         alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
         offset = 0
         for f in dataFiles:
+            print "Loading data from file %s..." %(f,)
+            sys.stdout.flush()
             data,sr = extraction.readDataFile(f)
             
             #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
             alldata[:,offset:offset+data.shape[0]] = data[:,channels].T
             offset+=data.shape[0]
-
+        
+        print "Computing inverse covariance matrix..."
+        sys.stdout.flush()
         cinv = np.linalg.pinv(np.cov(alldata))
         winlen = alldata.shape[1]
         dataFile = h5py.File('%sg%.4d.hdf5' %(base,group),'a')
@@ -1028,14 +1032,21 @@ if __name__ == '__main__':
 #field already exists
             pass
 #remove small waveforms
+        print "Removing small templates..."
+        sys.stdout.flush()
+        q = len(p)
         spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
+        print "Removed %d templates.." %( q-len(p),)
         if len(spkforms)>0:
             dataFile.create_group('spikeFormsLarge')
             dataFile['spikeFormsLarge']['spikeForms'] = spkforms
             dataFile['spikeFormsLarge']['p'] = p
 
         if len(spkforms)>1:
+            print "Combining templates..."
+            sys.stdout.flush()
             spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+            print "Left with %d templates .." %(len(p),)
         if len(spkforms)>0:
             dataFile['spikeForms'] = spkforms
             dataFile['p'] = p
