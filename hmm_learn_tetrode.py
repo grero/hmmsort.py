@@ -236,6 +236,14 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         outFile['all']['spikeForms'] = spkform
         outFile['all']['p'] = p
         outFile.flush()
+    spkform,p = combineSpikes(spkform,p,cinv,data.shape[0])
+    spikeForms['after_combine'] = {'spikeForms':spkform,'p':p}
+    if saveToFile and len(p)>0:
+        if not 'after_combine' in outFile:
+            outFile.create_group('after_combine')
+        outFile['after_combine']['spikeForms'] = spkform
+        outFile['after_combine']['p'] = p
+        outFile.flush()
     spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
     spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
     if saveToFile and len(p)>0:
@@ -270,14 +278,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         else:
             plt.draw()
     #combine templates
-    spkform,p = combineSpikes(spkform,p,cinv,data.shape[0])
-    spikeForms['after_combine'] = {'spikeForms':spkform,'p':p}
-    if saveToFile and len(p)>0:
-        if not 'after_combine' in outFile:
-            outFile.create_group('after_combine')
-        outFile['after_combine']['spikeForms'] = spkform
-        outFile['after_combine']['p'] = p
-        outFile.flush()
     if debug:
         plt.gcf().clear()
         for i in xrange(spkform.shape[0]):
