@@ -229,6 +229,10 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             saveToFile = False
     spikeForms = {}
     data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,**kwargs)
+    try:
+        datafile['cinv'] = cinv
+    except:
+        pass
     spikeForms['all'] = {'spikeForms': spkform,'p': p}
     if saveToFile:
         if not 'all' in outFile:
