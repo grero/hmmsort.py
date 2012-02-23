@@ -961,7 +961,7 @@ if __name__ == '__main__':
             pass
         else:
             files = opts.get('--sourceFile','').split(',')
-        dataFileName = files[0]
+        #dataFileName = files[0]
         spkforms = []
         p = []
         useFiles = []
@@ -1038,19 +1038,26 @@ if __name__ == '__main__':
         spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
         print "Removed %d templates.." %( q-len(p),)
         if len(spkforms)>0:
-            dataFile.create_group('spikeFormsLarge')
-            dataFile['spikeFormsLarge']['spikeForms'] = spkforms
-            dataFile['spikeFormsLarge']['p'] = p
-
+            try:
+                dataFile.create_group('spikeFormsLarge')
+                dataFile['spikeFormsLarge']['spikeForms'] = spkforms
+                dataFile['spikeFormsLarge']['p'] = p
+                dataFile.flush()
+            except:
+                #already exists
+                pass
         if len(spkforms)>1:
             print "Combining templates..."
             sys.stdout.flush()
             spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
             print "Left with %d templates .." %(len(p),)
         if len(spkforms)>0:
-            dataFile['spikeForms'] = spkforms
-            dataFile['p'] = p
-            dataFile.close()
+            try:
+                dataFile['spikeForms'] = spkforms
+                dataFile['p'] = p
+                dataFile.close()
+            except:
+                pass
 
     else:
         #check for the presence of an SGE_TASK_ID
