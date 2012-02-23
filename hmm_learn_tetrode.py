@@ -946,6 +946,16 @@ if __name__ == '__main__':
     redo = opts.has_key('--redo')
     if '--combine' in opts:
 #get all the data file, read the spkforms from each, then combine them 
+        #get the descriptor, if any
+        descriptorFile = glob.glob('*_descriptor.txt')
+        if len(descriptorFile)==0:
+            print "No descriptpr file found. Exiting.."
+            sys.exit(3)
+        descriptorFile = descriptorFile[0]
+        #get the base from the descriptor file
+        base = descriptorFile[:descriptorFile.index('_descriptor')]
+        #get the sort files
+        sortFiles = glob.glob('hmmsort/%s_highpassg%.4d.*.hdf5'% (base,group))
         if dataFileName == None:
             #try to guess from the group 
             pass
@@ -954,23 +964,25 @@ if __name__ == '__main__':
         dataFileName = files[0]
         spkforms = []
         p = []
-        for f in files:
+        useFiles = []
+        for f in sortFiles:
             try:
                 dataFile = h5py.File(f,'r')
-                spkforms.extend(dataFile['spikeForms'][:])
-                p.extend(dataFile['p'][:])
+                spkforms.extend(dataFile['all']['spikeForms'][:])
+                p.extend(dataFile['all']['p'][:])
                 dataFile.close()
+                useFiles.append(f)
             except:
                 continue
-
+        files = useFiles   
         spkforms = np.array(spkforms) 
         p = np.array(p)
 #get descriptor information
-        base = dataFileName[:dataFileName.rfind('_')]
-        descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
-        if not os.path.isfile(descriptorFile):
+        #base = dataFileName[:dataFileName.rfind('_')]
+        #descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
+        #if not os.path.isfile(descriptorFile):
 #sometimes the descriptor is located one level up
-            descriptorFile = '../%s' % (descriptorFile,)
+        #    descriptorFile = '../%s' % (descriptorFile,)
         descriptor = fr.readDescriptor(descriptorFile)
         channels = np.where(descriptor['gr_nr']==group)[0]
         nchs = sum(descriptor['gr_nr']>0)
@@ -985,17 +997,20 @@ if __name__ == '__main__':
 #spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
         """
 #gather all files to compute covariance matrix
+        """
         if descriptorFile[:2] == '..':
             files = glob.glob('../*_highpass.[0-9]*')
         else:
             files = glob.glob('*_highpass.[0-9]*')
-
-        sizes =  [os.stat(f).st_size for f in files]
+        """
+        dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
+        sizes =  [os.stat(f).st_size for f in dataFiles]
         total_size = ((np.array(sizes)-73)/2/nchs).sum()
         alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
         offset = 0
-        for f in files:
+        for f in dataFiles:
             data,sr = extraction.readDataFile(f)
+            
             #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
             alldata[:,offset:offset+data.shape[0]] = data[:,channels].T
             offset+=data.shape[0]
