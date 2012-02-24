@@ -77,7 +77,19 @@ def forward(g,P,spklength,N,winlength,p):
     return g 
 
 def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain=False,**kwargs):
-
+    """
+    Learns templates from the file pointed to by dataFile. The data should be
+    stored channel wise in int16 format, i.e. the resulting array should have
+    dimensions timepoints X channels. The first 4 bytes of the file should
+    contain an uint32 designating the size of the header. The header itself
+    should contain the number of channels, encoded as an uint8, and the sampling
+    rate, encoded as an uint32. 
+    Group indicates which tetrode group to analyze; the channels will be found
+    by reading the descriptor file corresponding to the requested data file. The
+    variable chunksize indicates the amount of data to load into memory. The
+    variables nFileChunks and fileChunkId indicate, respectively, the number of
+    file that the data file is divide into, and the chunk to process. 
+    """
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
         return [],[]
@@ -608,8 +620,10 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 happens, just report the exception and let sge know an error
                 occured
                 """
-                traceback.print_exec(file=sys.stdout)
-                sys.exit(99)
+                traceback.print_exc(file=sys.stdout)
+                if __name__ == '__main__':
+                    #only exit if we are running this as a script
+                    sys.exit(99)
 
             g[:,0] = g[:,-1]
 
