@@ -1,5 +1,8 @@
 #!/opt/cluster/usr/bin/python2.6
-##!/usr/bin/env python2.6
+"""@package hmm_learn_tetrode
+This package contains a set of functions to learn spike templates from highpass
+data
+"""
 
 import numpy as np
 import scipy.weave as weave
