@@ -181,7 +181,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         else:
             outfile = False
         spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2,saveToFile=outfile,**kwargs)
-    if spikeForms != None and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
+    if spikeForms != None and 'second_learning' in spikeForms and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
         if save:
             #reopen to save the last result
             outf.close()
@@ -245,9 +245,9 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     spikeForms = {}
     data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,**kwargs)
     try:
-        datafile['cinv'] = cinv
+        outFile['cinv'] = cinv
     except:
-        pass
+        print "Could not save inverse covariance matrix"
     spikeForms['all'] = {'spikeForms': spkform,'p': p}
     if saveToFile:
         if not 'all' in outFile:
@@ -1094,7 +1094,7 @@ if __name__ == '__main__':
             sys.stdout.flush()
             
         try:
-            spikeForms,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid)
+            spikeForms,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid,redo=redo)
         except IOError:
             print "Could not read/write to file"
             sys.exit(99)
