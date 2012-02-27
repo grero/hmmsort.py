@@ -998,6 +998,7 @@ if __name__ == '__main__':
         files = useFiles   
         spkforms = np.array(spkforms) 
         p = np.array(p)
+        print "Found a total of %d spikeforms..." (spkforms.shape[0],)
 #get descriptor information
         #base = dataFileName[:dataFileName.rfind('_')]
         #descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
