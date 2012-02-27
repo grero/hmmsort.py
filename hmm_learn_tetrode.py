@@ -1043,7 +1043,7 @@ if __name__ == '__main__':
         sys.stdout.flush()
         cinv = np.linalg.pinv(np.cov(alldata))
         winlen = alldata.shape[1]
-        dataFile = h5py.File('%sg%.4d.hdf5' %(base,group),'a')
+        dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'a')
         try:
             dataFile['cinv'] = cinv
             dataFile.create_group('spikeFormsAll')
