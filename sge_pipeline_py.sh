@@ -26,7 +26,7 @@ do
 		while [ $i -le $nfiles ]
 		do
 			nr=$( printf %.4d $i )
-			outfile=${baseh}$( printf %.4d $g ).$( printf %.4d $i ).hdf5
+			outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).hdf5
 			outfiles=${outfiles}${outfile},
 			#break the file into task chunks of 3 million data points each
 			nchunks=`ls -l ${baseh}.${nr} | awk '{print int($5/3000000/36/2+0.5)}'`
@@ -43,8 +43,8 @@ do
 		done
 		jobidstr=`echo ${jobid[*]} | sed -e 's/ /,/g'`
 		#one job to gather all the results
-		jobid=`echo "cd $PWD; $BINDIR/hmm_learn_tetrode.py --sourceFile ${outfiles} --combine | qsub -j y -V -N hmmGather$g -o $HOME/tmp/ -e $HOME/tmp/ -l mem=20G -l s_rt=7000 -hold_jid $jobidstr -m e -M roger.herikstad@gmail.com"`
-
+		jobid=`echo "cd $PWD; $BINDIR/hmm_learn_tetrode.py --sourceFile ${outfiles} --combine --group $g"| qsub -j y -V -N hmmGather$g -o $HOME/tmp/ -e $HOME/tmp/ -l mem=20G -l s_rt=7000 -hold_jid $jobidstr -m e -M roger.herikstad@gmail.com`
+		echo $jobid
 		while [ $i -le $nfiles ]; do f=$fname.`printf "%.4d" $i`.mat; test -e $f|| echo "cd $PWD;touch $f; hostname; $BINDIR/run_hmm_decode.sh /Applications/MATLAB_R2010a.app/ ${sortfile}g$g $sortwindow $sortp SourceFile $baseh.$( printf "%.4d" $i ) Group $g save hdf5;test -s $f || rm $f"| qsub -j y -V -N hmmDecode$g$i -o $HOME/tmp/ -e $HOME/tmp/ -l mem=2G -l -l s_rt=7000  -hold_jid $jobid; let i=$i+1;done
 
 	fi
