@@ -34,9 +34,9 @@ do
 			then
 				if [ $nchunks -gt 0 ]
 				then
-					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -t 1-${nchunks}| awk '{print $3}'`
+					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -t 1-${nchunks}| awk '{print $3}'| awk -F . '{print $1}'`
 				else
-					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 | awk '{print $3}'`
+					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 | awk '{print $3}' | awk -F . '{print $1}'`
 				fi
 			fi
 			let i=$i+1
