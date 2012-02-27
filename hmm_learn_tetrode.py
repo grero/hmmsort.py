@@ -1084,7 +1084,7 @@ if __name__ == '__main__':
         #check for the presence of an SGE_TASK_ID
         tid = None
         nchunks = None
-        if 'SGE_TASK_ID' in os.environ:
+        if 'SGE_TASK_ID' in os.environ and 'SGE_TASK_FIRST' in os.environ:
             #signifies that we should use split the file
             tfirst = int(os.environ.get('SGE_TASK_FIRST',0))
             tlast = int(os.environ.get('SGE_TASK_LAST',0))
