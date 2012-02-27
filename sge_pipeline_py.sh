@@ -26,12 +26,20 @@ do
 		while [ $i -le $nfiles ]
 		do
 			nr=$( printf %.4d $i )
-			outfile=${base}$( printf %.4d $g ).$( printf %.4d $i ).hdf5
+			outfile=${baseh}$( printf %.4d $g ).$( printf %.4d $i ).hdf5
 			outfiles=${outfiles}${outfile},
+			#break the file into task chunks of 3 million data points each
+			nchunks=`ls -l ${baseh}.${nr} | awk '{print int($5/3000000/36/2+0.5)}'`
 			if [ ! -e $PWD/hmmsort/$outfile ]
 			then
-				jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/hmmsort/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 | awk '{print $3}'`
+				if [ $nchunks -gt 0 ]
+				then
+					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -t 1-${nchunks}| awk '{print $3}'`
+				else
+					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 | awk '{print $3}'`
+				fi
 			fi
+			let i=$i+1
 		done
 		jobidstr=`echo ${jobid[*]} | sed -e 's/ /,/g'`
 		#one job to gather all the results
