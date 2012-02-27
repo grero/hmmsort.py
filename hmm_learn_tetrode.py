@@ -1044,7 +1044,10 @@ if __name__ == '__main__':
         sys.stdout.flush()
         cinv = np.linalg.pinv(np.cov(alldata))
         winlen = alldata.shape[1]
-        dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'a')
+        if redo:
+            dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'w')
+        else
+            dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'a')
         try:
             dataFile['cinv'] = cinv
             dataFile.create_group('spikeFormsAll')
@@ -1099,5 +1102,5 @@ if __name__ == '__main__':
             spikeForms,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid,redo=redo)
         except IOError:
             print "Could not read/write to file"
-            sys.exit(99)
+            sys.exit(100)
 
