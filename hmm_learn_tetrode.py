@@ -1046,7 +1046,7 @@ if __name__ == '__main__':
         winlen = alldata.shape[1]
         if redo:
             dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'w')
-        else
+        else:
             dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'a')
         try:
             dataFile['cinv'] = cinv
