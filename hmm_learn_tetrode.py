@@ -989,8 +989,8 @@ if __name__ == '__main__':
         for f in sortFiles:
             try:
                 dataFile = h5py.File(f,'r')
-                spkforms.extend(dataFile['all']['spikeForms'][:])
-                p.extend(dataFile['all']['p'][:])
+                spkforms.extend(dataFile['after_noise']['spikeForms'][:])
+                p.extend(dataFile['after_noise']['p'][:])
                 dataFile.close()
                 useFiles.append(f)
             except:
@@ -1035,8 +1035,9 @@ if __name__ == '__main__':
             data,sr = extraction.readDataFile(f)
             
             #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
-            alldata[:,offset:offset+data.shape[0]] = data[:,channels].T
-            offset+=data.shape[0]
+            alldata[:,offset:offset+data.shape[1]] = data[channels,:]
+            alldata.flush()
+            offset+=data.shape[1]
         
         print "Computing inverse covariance matrix..."
         sys.stdout.flush()
@@ -1057,7 +1058,7 @@ if __name__ == '__main__':
         sys.stdout.flush()
         q = len(p)
         spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
-        print "Removed %d templates.." %( q-len(p),)
+        print "Removed %d small templates.." %( q-len(p),)
         if len(spkforms)>0:
             try:
                 dataFile.create_group('spikeFormsLarge')
@@ -1084,7 +1085,7 @@ if __name__ == '__main__':
         #check for the presence of an SGE_TASK_ID
         tid = None
         nchunks = None
-        if 'SGE_TASK_ID' in os.environ and 'SGE_TASK_FIRST' in os.environ:
+        if 'SGE_TASK_ID' in os.environ and 'SGE_TASK_FIRST' in os.environ and os.environ.get('SGE_TASK_FIRST','') != 'undefined':
             #signifies that we should use split the file
             tfirst = int(os.environ.get('SGE_TASK_FIRST',0))
             tlast = int(os.environ.get('SGE_TASK_LAST',0))
