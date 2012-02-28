@@ -138,7 +138,11 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
             else:
                 outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
         try:
-            outf = h5py.File(outfile,'a')
+            if os.path.isfile(outfile) and not kwargs.get('redo',False):
+                print "Data file %s already exists and no redo was requested. Exiting..." %(outfile,)
+                sys.exit(0)
+            else:
+                outf = h5py.File(outfile,'a')
         except IOError:
             #file exists; what do we do?
             print 'An error occurred trying to open the file %s...' %(outfile,)
