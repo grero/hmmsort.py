@@ -53,11 +53,14 @@ do
 		done
 		jobidstr=`echo ${jobid[*]} | sed -e 's/ /,/g'`
 		#one job to gather all the results
-		if [  ${#jobid[*]} -gt 0 ]
+		if [ ! -e hmmsort/${base}g$( printf %.4d $g ).hdf5 ]
 		then
-			newjobid=`echo "cd $PWD; $BINDIR/hmm_learn_tetrode.py --sourceFile ${outfiles} --combine --group $g"| qsub -j y -V -N hmmGather${base}$g -o $HOME/tmp/ -e $HOME/tmp/ -l mem=20G -hold_jid $jobidstr -m e -M roger.herikstad@gmail.com`
-		else
-			newjobid=`echo "cd $PWD; $BINDIR/hmm_learn_tetrode.py --sourceFile ${outfiles} --combine --group $g"| qsub -j y -V -N hmmGather${base}$g -o $HOME/tmp/ -e $HOME/tmp/ -l mem=20G -l -m e -M roger.herikstad@gmail.com`
+			if [  ${#jobid[*]} -gt 0 ]
+			then
+				newjobid=`echo "cd $PWD; $BINDIR/hmm_learn_tetrode.py --sourceFile ${outfiles} --combine --group $g"| qsub -j y -V -N hmmGather${base}$g -o $HOME/tmp/ -e $HOME/tmp/ -l mem=20G -hold_jid $jobidstr -m e -M roger.herikstad@gmail.com`
+			else
+				newjobid=`echo "cd $PWD; $BINDIR/hmm_learn_tetrode.py --sourceFile ${outfiles} --combine --group $g"| qsub -j y -V -N hmmGather${base}$g -o $HOME/tmp/ -e $HOME/tmp/ -l mem=20G -l -m e -M roger.herikstad@gmail.com`
+			fi
 		fi
 		while [ $i -le $nfiles ]; do f=$fname.`printf "%.4d" $i`.mat; test -e $f|| echo "cd $PWD;touch $f; hostname; $BINDIR/run_hmm_decode.sh /Applications/MATLAB_R2010a.app/ ${sortfile}g$g $sortwindow $sortp SourceFile $baseh.$( printf "%.4d" $i ) Group $g save hdf5;test -s $f || rm $f"| qsub -j y -V -N hmmDecode$g$i -o $HOME/tmp/ -e $HOME/tmp/ -l mem=2G -l -l s_rt=7000  -hold_jid $newjobid; let i=$i+1;done
 
