@@ -30,12 +30,22 @@ do
 			outfiles=${outfiles}${outfile},
 			#break the file into task chunks of 3 million data points each
 			nchunks=`ls -l ${baseh}.${nr} | awk '{print int($5/3000000/36/2+0.5)}'`
-			if [ ! -e $PWD/hmmsort/$outfile ]
+			if [ $nchunks -gt 0 ]
 			then
-				if [ $nchunks -gt 0 ]
+				c=1
+				while [ $c -le $nchunks ]
+				do
+					outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).$c.hdf5
+					if [ ! -e $PWD/hmmsort/$outfile ]
+					then
+						jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;SGE_TASK_ID=$c SGE_TASK_FIRST=1 SGE_TASK_LAST=$nchunks $BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 | awk '{print $3}'| awk -F . '{print $1}'`
+					fi
+					let c=$c+1
+				done
+			else
+				outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).hdf5
+				if [ ! -e $PWD/hmmsort/$outfile ]
 				then
-					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -t 1-${nchunks}| awk '{print $3}'| awk -F . '{print $1}'`
-				else
 					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/" | qsub -j y -V -N hmmLearng${g} -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 | awk '{print $3}' | awk -F . '{print $1}'`
 				fi
 			fi
