@@ -20,6 +20,7 @@ from mpl_toolkits.axisartist import Subplot
 import scipy.cluster.hierarchy as hcluster
 import scipy.weave as weave
 import scipy.spatial as spatial
+import scipy.io as mio
 
 def formatAxis(ax):
     try:
@@ -304,13 +305,24 @@ def processData(fname,dataFile=None):
     if not os.path.isfile(fname):
         print "Sorry, the file %s could not be found" % fname
         return
+    mustClose = False
     try:
-        sortData = h5py.File(fname,'r')
+        if h5py.is_hdf5(fname):
+            sortData = h5py.File(fname,'r')
+            mustClose = True
+        else:
+            sortData = {}
+            d = mio.loadmat(fname,mdict=sortData)
+
         
         #load the state sequence for all neurons
-        seq = sortData['mlseq'][:].astype(np.int).T
+        seq = sortData['mlseq'][:].astype(np.int)
+        if seq.shape[0] > seq.shape[1]:
+            seq = seq.T
         #load the spike forms for each neuron
-        spikeForms = sortData['spikeForms'][:].transpose((2,1,0))
+        spikeForms = sortData['spikeForms'][:]
+        if spikeForms.shape[0] != seq.shape[0]:
+            spikeForms = spikeForms.transpose((2,1,0))
         
         #create a signal with overlaps on each channel
         #S = spikeForms[np.arange(spikeForms.shape[0])[:,None,None],np.arange(spikeForms.shape[1])[None,:,None],seq[:,None,:]].sum(0)
@@ -396,7 +408,8 @@ def processData(fname,dataFile=None):
                     data = data[:,channels]
             else:
                 print "Sorry, no data found. Exiting..."
-                sortData.close()
+                if mustClose:
+                    sortData.close()
                 return {'unitTimePoints': units,'spikeIdx':spikeIdx}
         
         keys = np.array(units.keys())
@@ -424,7 +437,8 @@ def processData(fname,dataFile=None):
         del data
 
     finally:
-        sortData.close()
+        if mustClose:
+            sortData.close()
     
     
     return {'unitTimePoints': units,'unitSpikes':spikes,'allSpikes':allSpikes,'spikeIdx':spikeIdx,'dataSize':dataSize,'spikeForms':spikeForms,'channels':channels,'uniqueIdx':uniqueIdx,'nonOverlapIdx': nonoverlapIdx}
