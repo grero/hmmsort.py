@@ -38,7 +38,7 @@ do
 					outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).$c.hdf5
 					if [ ! -e $PWD/hmmsort/$outfile ]
 					then
-						jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;SGE_TASK_ID=$c SGE_TASK_FIRST=1 SGE_TASK_LAST=$nchunks $BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile};rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn{base}${g}${i}_$c -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD*| awk '{print $3}'| awk -F . '{print $1}'`
+						jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;SGE_TASK_ID=$c SGE_TASK_FIRST=1 SGE_TASK_LAST=$nchunks $BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile};rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn${base}${g}_${i}_$c -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD*| awk '{print $3}'| awk -F . '{print $1}'`
 					fi
 					let c=$c+1
 				done
@@ -46,7 +46,7 @@ do
 				outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).hdf5
 				if [ ! -e $PWD/hmmsort/$outfile ]
 				then
-					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile}; rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn{base}${g}$i -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD* | awk '{print $3}' | awk -F . '{print $1}'`
+					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile}; rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn${base}${g}_$i -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD* | awk '{print $3}' | awk -F . '{print $1}'`
 				fi
 			fi
 			let i=$i+1
@@ -64,7 +64,7 @@ do
 		fi
 		#reset i
 		i=0
-		while [ $i -le $nfiles ]; do f=$fname.`printf "%.4d" $i`.mat; test -e hmmsort/$f|| echo "cd $PWD;touch $f; hostname; $BINDIR/run_hmm_decode.sh /Applications/MATLAB_R2010a.app/ hmmsort/${sortfile}g$g $sortwindow $sortp SourceFile $baseh.$( printf "%.4d" $i ) Group $g save hdf5;test -s $f || rm $f"| qsub -j y -V -N decode${base}$g_$i -o $HOME/tmp/ -e $HOME/tmp/ -l mem=2G -l -l s_rt=7000  -hold_jid $newjobid; let i=$i+1;done
+		while [ $i -le $nfiles ]; do f=$fname.`printf "%.4d" $i`.mat; test -e hmmsort/$f|| echo "cd $PWD;touch $f; hostname; $BINDIR/run_hmm_decode.sh /Applications/MATLAB_R2010a.app/ hmmsort/${sortfile}g$g $sortwindow $sortp SourceFile $baseh.$( printf "%.4d" $i ) Group $g save hdf5;test -s $f || rm $f"| qsub -j y -V -N decode${base}$g_$i -o $HOME/tmp/ -e $HOME/tmp/ -l mem=2G -l s_rt=7000  -hold_jid $newjobid; let i=$i+1;done
 
 	fi
 done
