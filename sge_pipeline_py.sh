@@ -12,6 +12,7 @@ baseh=`echo ${hfiles} | awk -F "." '{print $1 }' | uniq`
 base=`echo ${baseh} | awk -F "_" '{ for(i=1;i<NF;i++) {print $i}}' | paste -s -d "_" -`
 #base=`echo ${baseh} | awk -F "_" '{print $1}'`
 groups=`awk '/Active/ {print $3}' ${base}_descriptor.txt | sort | uniq`
+nchs=`awk '/Channels/ {print $NF}' ${base}_descriptor.txt`
 nfiles=`echo $hfiles | awk '{print NF}'`
 outfiles=''
 echo $nfiles
@@ -27,9 +28,8 @@ do
 		do
 			nr=$( printf %.4d $i )
 			outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).hdf5
-			outfiles=${outfiles}${outfile},
 			#break the file into task chunks of 3 million data points each
-			nchunks=`ls -l ${baseh}.${nr} | awk '{print int($5/3000000/36/2+0.5)}'`
+			nchunks=`ls -lL ${baseh}.${nr} | awk -v c=${nchs} '{print int($5/3000000/c/2+0.5)}'`
 			if [ $nchunks -gt 0 ]
 			then
 				c=1
@@ -41,9 +41,11 @@ do
 						jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;SGE_TASK_ID=$c SGE_TASK_FIRST=1 SGE_TASK_LAST=$nchunks $BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile};rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn${base}${g}_${i}_$c -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD*| awk '{print $3}'| awk -F . '{print $1}'`
 					fi
 					let c=$c+1
+					outfiles=${outfiles}${outfile},
 				done
 			else
 				outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).hdf5
+				outfiles=${outfiles}${outfile},
 				if [ ! -e $PWD/hmmsort/$outfile ]
 				then
 					jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;$BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --outFile ${outfile} --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile}; rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn${base}${g}_$i -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD* | awk '{print $3}' | awk -F . '{print $1}'`
