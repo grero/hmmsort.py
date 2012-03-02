@@ -836,7 +836,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
         #rotate order of the templates
         #ptemp =np.zeros((spks,))
         #forms = np.zeros(spkform.shape)
-        spkforms = np.roll(spkform,-1,axis=0)
+        spkform = np.roll(spkform,-1,axis=0)
         p = np.roll(p,-1)
         """
         for i in xrange(spks):
