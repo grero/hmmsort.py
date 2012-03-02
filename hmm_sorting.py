@@ -21,6 +21,7 @@ import scipy.cluster.hierarchy as hcluster
 import scipy.weave as weave
 import scipy.spatial as spatial
 import scipy.io as mio
+from PyNpt import extraction
 
 def formatAxis(ax):
     try:
@@ -395,12 +396,8 @@ def processData(fname,dataFile=None):
                 dataFile = sortData['dataFile']
         if data == None:
             if dataFile != None:
-                fid = open(dataFile,'r')
-                hs = np.fromfile(fid,dtype=np.uint32,count=1)
-                nchs = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.int64)
-                fid.close()
-                data = np.memmap(dataFile,dtype=np.int16,offset=hs,mode='r')
-                data = data.reshape(data.size/nchs,nchs)
+                data,sr = extraction.readDataFile(dataFile)
+                data = data.T
                 dataSize = data.shape[0]
                 if 'Channels' in sortData:
                     #subtract 1 because we are dealing with matlab base-1 indexing
