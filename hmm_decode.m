@@ -78,61 +78,61 @@ try
 		else
 			data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
 		end
+	end
+
+	% sort the data
+	% length of the pieces to be sorted at once
+	if nargin < 2
+		patchlength = 20000;
+	else
+		if ischar(patchlength)
+			patchlength = str2num(patchlength);
+		end
+	end
+	patchlength = min(patchlength,size(data,2));
+	% spiking probability
+	if nargin <3
+		p = 1e-10;
+	else
+		if ischar(p)
+			p = str2num(p);
+		end
+	end
+
+
+	% mlseq is an NxT array with the states of all N templates at each time
+	mlseq = cutsort(data, spkform, cinv, patchlength, p);
+	%save sequence to sorting file; if a source file was used, save to a file consistent with that name
+	if Args.save
+		if ~isempty(Args.SourceFile)
+			parts = strsplit(Args.SourceFile,'_');
+			idx = strfind(Args.SourceFile,'highpass');
+			if isempty(Args.Group) && ~isempty(Args.Channels)
+				descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+				Args.Group = descriptor.group(descriptor.channel==Args.Channels(1));
+			end
+			nparts = strsplit(Args.SourceFile,'.');
+			fname = sprintf('hmmsort/%sg%.4d.%.4d.mat',Args.SourceFile(1:idx-2),Args.Group,str2num(nparts{end}));
+			disp(['Saving data to file ' fname '...']);
+			%if exist(fname)
+			save(fname,'mlseq','spikeForms');
+			%else
+			%	save(fname,'mlseq','spikeForms');
+			%end
+		else
+			save([filename '.mat'],'mlseq','-append');
+			fname = [filename '.mat'];
+		end
+		if length(Args.Channels)>0
+			Channels = Args.Channels;
+			save(fname,'Channels','-append');
+		end
+	end
 	catch
 		disp('An error occurred');
 		lasterror.message
 		exit(100);
 	end
-end
-
-% sort the data
-% length of the pieces to be sorted at once
-if nargin < 2
-    patchlength = 20000;
-else
-	if ischar(patchlength)
-		patchlength = str2num(patchlength);
-	end
-end
-patchlength = min(patchlength,size(data,2));
-% spiking probability
-if nargin <3
-    p = 1e-10;
-else
-	if ischar(p)
-		p = str2num(p);
-	end
-end
-
-
-% mlseq is an NxT array with the states of all N templates at each time
-mlseq = cutsort(data, spkform, cinv, patchlength, p);
-%save sequence to sorting file; if a source file was used, save to a file consistent with that name
-if Args.save
-	if ~isempty(Args.SourceFile)
-		parts = strsplit(Args.SourceFile,'_');
-		idx = strfind(Args.SourceFile,'highpass');
-		if isempty(Args.Group) && ~isempty(Args.Channels)
-			descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
-			Args.Group = descriptor.group(descriptor.channel==Args.Channels(1));
-		end
-		nparts = strsplit(Args.SourceFile,'.');
-		fname = sprintf('hmmsort/%sg%.4d.%.4d.mat',Args.SourceFile(1:idx-2),Args.Group,str2num(nparts{end}));
-		disp(['Saving data to file ' fname '...']);
-		%if exist(fname)
-		save(fname,'mlseq','spikeForms');
-		%else
-		%	save(fname,'mlseq','spikeForms');
-		%end
-	else
-		save([filename '.mat'],'mlseq','-append');
-		fname = [filename '.mat'];
-	end
-	if length(Args.Channels)>0
-		Channels = Args.Channels;
-		save(fname,'Channels','-append');
-	end
-end
 end
 
 function mlseq = cutsort(data, spkform, cinv, patchlength, p)
