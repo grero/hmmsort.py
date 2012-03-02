@@ -757,7 +757,9 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
     numspikes = j+1
 
     #combine larger spikes
-    for r in xrange(numspikes):
+    #for r in xrange(numspikes):
+    r = 0
+    while r < numspikes:
         spklennew = spklen*10+10
         splineform = np.zeros((dim,spklennew,spks))
         splineform_test = np.zeros((dim,spklennew,spks))
@@ -814,7 +816,8 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
 
         print "Could not combine any more: value %.3f" %(value,)
         sys.stdout.flush()
-
+        
+        #shift back
         for i in xrange(1,spks):
             if shift[i]!=1:
                 splineform[:,:,i] = np.concatenate((splineform[:,-shift[i]+1:,i],splineform[:,:-shift[i]+1,i]),axis=1)
@@ -830,14 +833,17 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
 
             
         #rotate order of the templates
-        ptemp =np.zeros((spks,))
-        forms = np.zeros(spkform.shape)
+        #ptemp =np.zeros((spks,))
+        #forms = np.zeros(spkform.shape)
+        spkforms = np.roll(spkform,-1,axis=0)
+        p = np.roll(p,-1)
+        """
         for i in xrange(spks):
             forms[i] = spkform[i % spks]
             ptemp[i] = p[i % spks]
-
         spkform = forms
         p = ptemp
+        """
 
     #add excluded templates
     i = spks-1
