@@ -758,8 +758,9 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
 
     #combine larger spikes
     #for r in xrange(numspikes):
-    r = 0
+    r =0 
     while r < numspikes:
+        r+=1
         spklennew = spklen*10+10
         splineform = np.zeros((dim,spklennew,spks))
         splineform_test = np.zeros((dim,spklennew,spks))
@@ -962,155 +963,159 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
 if __name__ == '__main__':
     
     import getopt
+    try:
 
-    opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','fileChunkSize=','redo'])
+        opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','fileChunkSize=','redo'])
 
-    opts = dict(opts)
+        opts = dict(opts)
 
-    dataFileName = opts.get('--sourceFile')
-    outFileName = opts.get('--outFile')
-    group = int(opts.get('--group','1'))
-    splitp = np.float(opts.get('--minFiringRate','0.5'))
-    chunkSize = min(np.float(opts.get('--chunkSize','50000')),1.0e6)
-    version = int(opts.get('--version','2'))
-    debug = opts.has_key('--debug')
-    redo = opts.has_key('--redo')
-    if '--combine' in opts:
+        dataFileName = opts.get('--sourceFile')
+        outFileName = opts.get('--outFile')
+        group = int(opts.get('--group','1'))
+        splitp = np.float(opts.get('--minFiringRate','0.5'))
+        chunkSize = min(np.float(opts.get('--chunkSize','50000')),1.0e6)
+        version = int(opts.get('--version','2'))
+        debug = opts.has_key('--debug')
+        redo = opts.has_key('--redo')
+        if '--combine' in opts:
 #get all the data file, read the spkforms from each, then combine them 
-        #get the descriptor, if any
-        descriptorFile = glob.glob('*_descriptor.txt')
-        if len(descriptorFile)==0:
-            print "No descriptpr file found. Exiting.."
-            sys.exit(3)
-        descriptorFile = descriptorFile[0]
-        #get the base from the descriptor file
-        base = descriptorFile[:descriptorFile.index('_descriptor')]
-        #get the sort files
-        sortFiles = glob.glob('hmmsort/%s_highpassg%.4d.*.hdf5'% (base,group))
-        if dataFileName == None:
-            #try to guess from the group 
-            pass
-        else:
-            files = opts.get('--sourceFile','').split(',')
-        #dataFileName = files[0]
-        spkforms = []
-        p = []
-        useFiles = []
-        for f in sortFiles:
-            try:
-                dataFile = h5py.File(f,'r')
-                spkforms.extend(dataFile['after_noise']['spikeForms'][:])
-                p.extend(dataFile['after_noise']['p'][:])
-                dataFile.close()
-                useFiles.append(f)
-            except:
-                continue
-        files = useFiles   
-        spkforms = np.array(spkforms) 
-        p = np.array(p)
-        print "Found a total of %d spikeforms..." % (spkforms.shape[0],)
+            #get the descriptor, if any
+            descriptorFile = glob.glob('*_descriptor.txt')
+            if len(descriptorFile)==0:
+                print "No descriptpr file found. Exiting.."
+                sys.exit(3)
+            descriptorFile = descriptorFile[0]
+            #get the base from the descriptor file
+            base = descriptorFile[:descriptorFile.index('_descriptor')]
+            #get the sort files
+            sortFiles = glob.glob('hmmsort/%s_highpassg%.4d.*.hdf5'% (base,group))
+            if dataFileName == None:
+                #try to guess from the group 
+                pass
+            else:
+                files = opts.get('--sourceFile','').split(',')
+            #dataFileName = files[0]
+            spkforms = []
+            p = []
+            useFiles = []
+            for f in sortFiles:
+                try:
+                    dataFile = h5py.File(f,'r')
+                    spkforms.extend(dataFile['after_noise']['spikeForms'][:])
+                    p.extend(dataFile['after_noise']['p'][:])
+                    dataFile.close()
+                    useFiles.append(f)
+                except:
+                    continue
+            files = useFiles   
+            spkforms = np.array(spkforms) 
+            p = np.array(p)
+            print "Found a total of %d spikeforms..." % (spkforms.shape[0],)
 #get descriptor information
-        #base = dataFileName[:dataFileName.rfind('_')]
-        #descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
-        #if not os.path.isfile(descriptorFile):
+            #base = dataFileName[:dataFileName.rfind('_')]
+            #descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
+            #if not os.path.isfile(descriptorFile):
 #sometimes the descriptor is located one level up
-        #    descriptorFile = '../%s' % (descriptorFile,)
-        descriptor = fr.readDescriptor(descriptorFile)
-        channels = np.where(descriptor['gr_nr']==group)[0]
-        nchs = sum(descriptor['gr_nr']>0)
-        """
+            #    descriptorFile = '../%s' % (descriptorFile,)
+            descriptor = fr.readDescriptor(descriptorFile)
+            channels = np.where(descriptor['gr_nr']==group)[0]
+            nchs = sum(descriptor['gr_nr']>0)
+            """
 #here it becomes tricky; if the combined data file has already been
 #reordered, we need to get the channels in the reordering scheme
-            reorder = np.loadtxt('reorder.txt',dtype=np.uint16)
-            channels = np.where(np.lib.arraysetops.in1d(reorder,channels))[0]
+                reorder = np.loadtxt('reorder.txt',dtype=np.uint16)
+                channels = np.where(np.lib.arraysetops.in1d(reorder,channels))[0]
 #compute covariance matrix on the full dataset
 
 
 #spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
-        """
+            """
 #gather all files to compute covariance matrix
-        """
-        if descriptorFile[:2] == '..':
-            files = glob.glob('../*_highpass.[0-9]*')
-        else:
-            files = glob.glob('*_highpass.[0-9]*')
-        """
-        dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
-        sizes =  [os.stat(f).st_size for f in dataFiles]
-        total_size = ((np.array(sizes)-73)/2/nchs).sum()
-        alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
-        offset = 0
-        for f in dataFiles:
-            print "Loading data from file %s..." %(f,)
-            sys.stdout.flush()
-            data,sr = extraction.readDataFile(f)
+            """
+            if descriptorFile[:2] == '..':
+                files = glob.glob('../*_highpass.[0-9]*')
+            else:
+                files = glob.glob('*_highpass.[0-9]*')
+            """
+            dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
+            sizes =  [os.stat(f).st_size for f in dataFiles]
+            total_size = ((np.array(sizes)-73)/2/nchs).sum()
+            alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
+            offset = 0
+            for f in dataFiles:
+                print "Loading data from file %s..." %(f,)
+                sys.stdout.flush()
+                data,sr = extraction.readDataFile(f)
+                
+                #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
+                alldata[:,offset:offset+data.shape[1]] = data[channels,:]
+                alldata.flush()
+                offset+=data.shape[1]
             
-            #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
-            alldata[:,offset:offset+data.shape[1]] = data[channels,:]
-            alldata.flush()
-            offset+=data.shape[1]
-        
-        print "Computing inverse covariance matrix..."
-        sys.stdout.flush()
-        cinv = np.linalg.pinv(np.cov(alldata))
-        winlen = alldata.shape[1]
-        if redo:
-            dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'w')
-        else:
-            dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'a')
-        try:
-            dataFile['cinv'] = cinv
-            dataFile.create_group('spikeFormsAll')
-            dataFile['spikeFormsAll']['spikeForms'] = spkforms
-            dataFile['spikeFormsAll']['p'] = p 
-            dataFile.flush()
-        except:
-#field already exists
-            pass
-#remove small waveforms
-        print "Removing small templates..."
-        sys.stdout.flush()
-        q = len(p)
-        spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
-        print "Removed %d small templates.." %( q-len(p),)
-        if len(spkforms)>0:
+            print "Computing inverse covariance matrix..."
+            sys.stdout.flush()
+            cinv = np.linalg.pinv(np.cov(alldata))
+            winlen = alldata.shape[1]
+            if redo:
+                dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'w')
+            else:
+                dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'a')
             try:
-                dataFile.create_group('spikeFormsLarge')
-                dataFile['spikeFormsLarge']['spikeForms'] = spkforms
-                dataFile['spikeFormsLarge']['p'] = p
+                dataFile['cinv'] = cinv
+                dataFile.create_group('spikeFormsAll')
+                dataFile['spikeFormsAll']['spikeForms'] = spkforms
+                dataFile['spikeFormsAll']['p'] = p 
                 dataFile.flush()
             except:
-                #already exists
+#field already exists
                 pass
-        if len(spkforms)>1:
-            print "Combining templates..."
+#remove small waveforms
+            print "Removing small templates..."
             sys.stdout.flush()
-            spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
-            print "Left with %d templates .." %(len(p),)
-        if len(spkforms)>0:
+            q = len(p)
+            spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
+            print "Removed %d small templates.." %( q-len(p),)
+            if len(spkforms)>0:
+                try:
+                    dataFile.create_group('spikeFormsLarge')
+                    dataFile['spikeFormsLarge']['spikeForms'] = spkforms
+                    dataFile['spikeFormsLarge']['p'] = p
+                    dataFile.flush()
+                except:
+                    #already exists
+                    pass
+            if len(spkforms)>1:
+                print "Combining templates..."
+                sys.stdout.flush()
+                spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+                print "Left with %d templates .." %(len(p),)
+            if len(spkforms)>0:
+                try:
+                    dataFile['spikeForms'] = spkforms
+                    dataFile['p'] = p
+                    dataFile.close()
+                except:
+                    pass
+
+        else:
+            #check for the presence of an SGE_TASK_ID
+            tid = None
+            nchunks = None
+            if 'SGE_TASK_ID' in os.environ and 'SGE_TASK_FIRST' in os.environ and os.environ.get('SGE_TASK_FIRST','') != 'undefined':
+                #signifies that we should use split the file
+                tfirst = int(os.environ.get('SGE_TASK_FIRST',0))
+                tlast = int(os.environ.get('SGE_TASK_LAST',0))
+                nchunks = tlast-tfirst+1
+                tid = int(os.environ['SGE_TASK_ID'])-1
+                print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid+1)
+                sys.stdout.flush()
+                
             try:
-                dataFile['spikeForms'] = spkforms
-                dataFile['p'] = p
-                dataFile.close()
-            except:
-                pass
-
-    else:
-        #check for the presence of an SGE_TASK_ID
-        tid = None
-        nchunks = None
-        if 'SGE_TASK_ID' in os.environ and 'SGE_TASK_FIRST' in os.environ and os.environ.get('SGE_TASK_FIRST','') != 'undefined':
-            #signifies that we should use split the file
-            tfirst = int(os.environ.get('SGE_TASK_FIRST',0))
-            tlast = int(os.environ.get('SGE_TASK_LAST',0))
-            nchunks = tlast-tfirst+1
-            tid = int(os.environ['SGE_TASK_ID'])-1
-            print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid+1)
-            sys.stdout.flush()
-            
-        try:
-            spikeForms,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid,redo=redo)
-        except IOError:
-            print "Could not read/write to file"
+                spikeForms,cinv = learnTemplatesFromFile(dataFileName,group,splitp = splitp,outfile=outFileName,chunksize=chunkSize,version=version,debug=debug,nFileChunks=nchunks,fileChunkId=tid,redo=redo)
+            except IOError:
+                print "Could not read/write to file"
+                sys.exit(100)
+        except:
+            print "An error occurred"
+            traceback.print_exc() 
             sys.exit(100)
-
