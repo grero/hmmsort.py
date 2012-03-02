@@ -25,59 +25,64 @@ addpath helper_functions
 % data      DxT array, data to sort
 % spkform   N-dimensional cell of DxK spike templates
 % cinv      inverse of the covariance of the model
-if ~Args.hdf5
-	load([filename '.mat'])
-else
-	spikeForms = hdf5read([filename '.hdf5'],'/spikeForms');
-	%need to permute
-	spikeForms = permute(spikeForms,[3,2,1]);
-	for i=1:size(spikeForms,1)
-		spkform{i} = squeeze(spikeForms(i,:,:));
-	end
-	%p = hdf5read([filename '.hdf5'],'/p');
-	cinv = hdf5read([filename '.hdf5'],'/cinv');
-end
-if ~isempty(Args.SourceFile)
-	header = ReadUEIFile('Filename',Args.SourceFile,'Header');
-	if header.headerSize == 73
-		fid = fopen(Args.SourceFile,'r');
-		[header.numChannels,header.samplingRate,scan_order,header.headerSize] = nptParseStreamerHeader(fid);
-		fclose(fid);
-	end
-	M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
-	if header.numChannels > size(spkform{1},1) 
-		if ischar(Args.Channels)
-			Args.Channels = str2num(Args.Channels);
+try
+	if ~Args.hdf5
+		load([filename '.mat'])
+	else
+		spikeForms = hdf5read([filename '.hdf5'],'/spikeForms');
+		%need to permute
+		spikeForms = permute(spikeForms,[3,2,1]);
+		for i=1:size(spikeForms,1)
+			spkform{i} = squeeze(spikeForms(i,:,:));
 		end
-		if length(Args.Channels)~=0
-			data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
-			data = data(Args.Channels,:);
-		elseif ~isempty(Args.Group)
-			%need to load the descriptor
-			if ischar(Args.Group)
-				Args.Group = str2num(Args.Group);
+		%p = hdf5read([filename '.hdf5'],'/p');
+		cinv = hdf5read([filename '.hdf5'],'/cinv');
+	end
+	if ~isempty(Args.SourceFile)
+		header = ReadUEIFile('Filename',Args.SourceFile,'Header');
+		if header.headerSize == 73
+			fid = fopen(Args.SourceFile,'r');
+			[header.numChannels,header.samplingRate,scan_order,header.headerSize] = nptParseStreamerHeader(fid);
+			fclose(fid);
+		end
+		M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
+		if header.numChannels > size(spkform{1},1) 
+			if ischar(Args.Channels)
+				Args.Channels = str2num(Args.Channels);
 			end
-			g = Args.Group;
-			parts = strsplit(Args.SourceFile,'_');
-			idx = strfind(Args.SourceFile,'highpass');
-			descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
-			channels = find(descriptor.group==g);
-			disp(['Sorting waveforms for group ' num2str(g) ' spanning channels ' num2str(channels) ' ...']);
-			if length(channels)==0
-				disp('Channel mismatch. Could not proceed');
+			if length(Args.Channels)~=0
+				data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+				data = data(Args.Channels,:);
+			elseif ~isempty(Args.Group)
+				%need to load the descriptor
+				if ischar(Args.Group)
+					Args.Group = str2num(Args.Group);
+				end
+				g = Args.Group;
+				idx = strfind(Args.SourceFile,'highpass');
+				idx = idx(end);
+				descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+				channels = find(descriptor.group==g);
+				disp(['Sorting waveforms for group ' num2str(g) ' spanning channels ' num2str(channels) ' ...']);
+				if length(channels)==0
+					disp('Channel mismatch. Could not proceed');
+					return
+				end
+				data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+				data = data(channels,:);
+				Args.Channels = channels;
+			else
+				disp('Channel mismatch. Could not proceed')
 				return
 			end
-			data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
-			data = data(channels,:);
-			Args.Channels = channels;
 		else
-			disp('Channel mismatch. Could not proceed')
-			return
+			data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
 		end
-	else
-		data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+	catch
+		disp('An error occurred');
+		lasterror.message
+		exit(100);
 	end
-
 end
 
 % sort the data
