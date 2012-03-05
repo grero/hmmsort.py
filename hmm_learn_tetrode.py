@@ -118,7 +118,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
     descriptorFile = '%s_descriptor.txt' % (dataFile[:dataFile.rfind('_')],)
     #get group information form the descriptor
     descriptor = fr.readDescriptor(descriptorFile)
-    channels = np.where(descriptor['gr_nr']==group)[0]
+    channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
     cdata = data[:,channels]
     if divideByGain and 'gain' in descriptor:
         cdata = cdata/np.float(descriptor['gain'])
@@ -1018,8 +1018,16 @@ if __name__ == '__main__':
 #sometimes the descriptor is located one level up
             #    descriptorFile = '../%s' % (descriptorFile,)
             descriptor = fr.readDescriptor(descriptorFile)
-            channels = np.where(descriptor['gr_nr']==group)[0]
-            nchs = sum(descriptor['gr_nr']>0)
+            channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
+            dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
+            #read the first data file to get the number of channels
+            if len(dataFiles)==0:
+                raise IOError('No datafile found')
+            #get the header size
+            hs = np.fromfile(dataFiles[0],dtype=np.uint32,count=1)
+            data,sr = extraction.readDataFile(dataFiles[0])
+            nchs = data.shape[0]
+            #nchs = sum(descriptor['gr_nr']>0)
             """
 #here it becomes tricky; if the combined data file has already been
 #reordered, we need to get the channels in the reordering scheme
@@ -1037,9 +1045,8 @@ if __name__ == '__main__':
             else:
                 files = glob.glob('*_highpass.[0-9]*')
             """
-            dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
             sizes =  [os.stat(f).st_size for f in dataFiles]
-            total_size = ((np.array(sizes)-73)/2/nchs).sum()
+            total_size = ((np.array(sizes)-hs)/2/nchs).sum()
             alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
             offset = 0
             for f in dataFiles:
@@ -1115,7 +1122,7 @@ if __name__ == '__main__':
             except IOError:
                 print "Could not read/write to file"
                 sys.exit(100)
-        except:
-            print "An error occurred"
-            traceback.print_exc(file=sys.stdout)
-            sys.exit(100)
+    except:
+        print "An error occurred"
+        traceback.print_exc(file=sys.stdout)
+        sys.exit(100)
