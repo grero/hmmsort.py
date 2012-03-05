@@ -558,8 +558,10 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         m = allspikes[:].mean(0)
         s = allspikes[:].std(0)
         plt.plot(x.T,m,'k',lw=1.5)
-
-        plt.plot(xt.T,spikeForms[int(c)].T,'r')
+        #find the minimum point for this template
+        ich = spikeForms[int(c)].min(1).argmin()
+        ix = spikeForms[int(c)][ich,:].argmin()
+        plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
         for i in xrange(x.shape[0]):
             plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
         yl = ax.get_ylim()
@@ -573,7 +575,7 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         m =  allspikes[:][nonOverlapIdx,:,:].mean(0)
         s =  allspikes[:][nonOverlapIdx,:,:].std(0)
         plt.plot(x.T,m,'k',lw=1.5)
-        plt.plot(xt.T,spikeForms[int(c)].T,'r')
+        plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
         for i in xrange(x.shape[0]):
             plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
         yl = ax.get_ylim()
@@ -590,7 +592,7 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         m =  allspikes[:][overlapIdx,:,:].mean(0)
         s =  allspikes[:][overlapIdx,:,:].std(0)
         plt.plot(x.T,m,'k',lw=1.5)
-        plt.plot(xt.T,spikeForms[int(c)].T,'r')
+        plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
         for i in xrange(x.shape[0]):
             plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
         yl = ax.get_ylim()
