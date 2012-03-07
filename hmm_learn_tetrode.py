@@ -115,7 +115,8 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
 
     data = np.memmap(dataFile,mode='r',dtype=np.int16,offset=header_size)
     data = data.reshape(data.size/channels,channels)
-    descriptorFile = '%s_descriptor.txt' % (dataFile[:dataFile.rfind('_')],)
+    head,tail = os.path.split(dataFile)
+    descriptorFile = '%s_descriptor.txt' % (tail[:tail.rfind('_')],)
     #get group information form the descriptor
     descriptor = fr.readDescriptor(descriptorFile)
     channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
@@ -129,7 +130,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         cdata = cdata[fileChunkId*fileChunkSize:(fileChunkId+1)*fileChunkSize,:]
     if save:
         if outfile == None:
-            name,ext = os.path.splitext(dataFile)
+            name,ext = os.path.splitext(tail)
             name.replace('_highpass','')
             if not os.path.isdir('hmmsort'):
                 os.mkdir('hmmsort')
@@ -146,6 +147,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         except IOError:
             #file exists; what do we do?
             print 'An error occurred trying to open the file %s...' %(outfile,)
+            sys.exit(0)
     if version == 1:
         #compute the covariance matrix of the full data
         cinv = np.linalg.pinv(np.cov(cdata.T))
