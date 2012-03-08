@@ -42,7 +42,7 @@ try
 		header = ReadUEIFile('Filename',Args.SourceFile,'Header');
 		if header.headerSize == 73
 			fid = fopen(Args.SourceFile,'r');
-			[header.numChannels,header.samplingRate,scan_order,header.headerSize] = nptParseStreamerHeader(fid);
+			[header.numChannels,header.samplingRate,scan_order] = nptParseStreamerHeader(fid);
 			fclose(fid);
 		end
 		M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
@@ -67,7 +67,17 @@ try
 					descriptor = ReadDescriptor(Args.DescriptorFile);
 				end
 
-				channels = find(descriptor.group==g);
+				%channels = find(descriptor.group==g);
+				channels = [];
+				j = 0;
+				for i=1:descriptor.number_of_channels
+					if strcmpi(descriptor.state{i},'Active') 
+						j = j+1;
+						if descriptor.group(i)==g
+							channels = [channels j]; 
+						end
+					end
+				end
 				disp(['Sorting waveforms for group ' num2str(g) ' spanning channels ' num2str(channels) ' ...']);
 				if length(channels)==0
 					disp('Channel mismatch. Could not proceed');
