@@ -16,7 +16,7 @@
 
 function mlseq = hmm_decode(filename, patchlength, p,varargin)
 
-Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0);
+Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile','');
 Args.flags = {'save','hdf5'};
 [Args,varargin] = getoptargs(varargin,Args);
 addpath helper_functions
@@ -61,7 +61,12 @@ try
 				g = Args.Group;
 				idx = strfind(Args.SourceFile,'highpass');
 				idx = idx(end);
-				descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+				if isempty(Args.DescriptorFile)
+					descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+				else
+					descriptor = ReadDescriptor(Args.DescriptorFile);
+				end
+
 				channels = find(descriptor.group==g);
 				disp(['Sorting waveforms for group ' num2str(g) ' spanning channels ' num2str(channels) ' ...']);
 				if length(channels)==0
@@ -108,8 +113,13 @@ try
 			parts = strsplit(Args.SourceFile,'_');
 			idx = strfind(Args.SourceFile,'highpass');
 			if isempty(Args.Group) && ~isempty(Args.Channels)
-				descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+				if isempty(Args.DescriptorFile)
+					descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+				else
+					descriptor = ReadDescriptor(Args.DescriptorFile);
+				end
 				Args.Group = descriptor.group(descriptor.channel==Args.Channels(1));
+
 			end
 			nparts = strsplit(Args.SourceFile,'.');
 			fname = sprintf('hmmsort/%sg%.4d.%.4d.mat',Args.SourceFile(1:idx-2),Args.Group,str2num(nparts{end}));
