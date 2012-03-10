@@ -17,6 +17,7 @@ import fileReaders as fr
 import scipy.interpolate as interpolate
 from PyNpt import extraction
 
+
 #use PDF backend if we are running a script
 if __name__ == '__main__':
     import matplotlib
@@ -510,7 +511,8 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         for j in xrange(len(spkform)):
             plt.subplot(neurons,1,j+1)
             plt.gca().clear()
-            plt.plot(x.T,spkform[j].T)
+            xx = np.arange(states)[None,:] + (states+12)*np.arange(levels)[:,None]
+            plt.plot(xx.T,spkform[j].T)
         plt.draw()    
 
     #del g,fit 
@@ -726,6 +728,49 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         spkform[j,:,:-1] = np.concatenate((W[:,1][:,None], W[:,j*(spklength-1)+1:(j+1)*(spklength-1)]),axis=1)
     
     return data,spkform,p,cinv
+
+def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4):
+
+    nspikes,levels,nstates = spkforms_old.shape
+    xx = np.linspace(0,nstates-1,nstates*10)
+    S = interpolate.interp1d(np.arange(nstates),spkforms_old,axis=-1)(xx)
+    p = pp
+    doCombine = True
+    #create a shift matrix
+    I = np.arange(len(xx))[None,:].repeat(len(xx),0)
+    for i in xrange(I.shape[0]):
+        I[i] = np.roll(I[i],i)
+    while doCombine:
+        dd = np.zeros((S.shape[0]-1,xx.shape[0]))
+        for i in xrange(dd.shape[1]):
+            d = S[0,:,:][None,:,:]-S[1:,:,I[i]]
+            dd[:,i] = (d*np.dot(cinv,d).transpose((1,0,2))).sum(1).sum(-1)
+        #find the optimal shift
+        shift_idx = dd.argmin(1)
+        #create a new matrix contaiing all waveforms shifted according to the
+        #best match with the frist
+        idx = dd.argmin(1)
+        Ss = np.concatenate((S[0,:,:][None,:,:],S[np.arange(1,S.shape[0])[:,None,None],np.arange(levels)[None,:,None],I[idx][:,None,:]]),axis=0)
+        D = dd[np.arange(dd.shape[0])[:,None],idx[:,None]]
+         
+        #find the smallest aligned distances and merge if those distances are
+        #not outlier
+        #combine spikes for which the difference is significant. Make use of the
+        #fact that the mahalanobis distance has a chi-square distribution
+        #
+        midx = np.where((1-stats.chi2.cdf(D,4*600)>0.05))[0]+1
+        if len(midx)==0:
+            doCombine = False
+        else:
+            midx = np.append([0],midx)
+            sidx = -np.lib.arraysetops.in1d(np.arange(S.shape[0]),midx)
+            #merge the templates
+            M = (p[midx][:,None,None]*Ss[midx]).sum(0)/p[midx].sum()
+            S = np.concatenate((S[sidx],M[None,:,:]),axis=0)
+            p = np.concatenate((p[sidx],[p[midx].sum()]))
+    #downsample before returning
+    S = interpolate.interp1d(xx,S,axis=-1)(np.arange(nstates))
+    return S,p
 
 def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
 
@@ -967,7 +1012,7 @@ if __name__ == '__main__':
     import getopt
     try:
 
-        opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','fileChunkSize=','redo'])
+        opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','fileChunkSize=','redo','basePath='])
 
         opts = dict(opts)
 
@@ -1021,54 +1066,80 @@ if __name__ == '__main__':
             #    descriptorFile = '../%s' % (descriptorFile,)
             descriptor = fr.readDescriptor(descriptorFile)
             channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
-            dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
-            #read the first data file to get the number of channels
-            if len(dataFiles)==0:
-                raise IOError('No datafile found')
-            #get the header size
-            hs = np.fromfile(dataFiles[0],dtype=np.uint32,count=1)
-            data,sr = extraction.readDataFile(dataFiles[0])
-            nchs = data.shape[0]
-            #nchs = sum(descriptor['gr_nr']>0)
-            """
-#here it becomes tricky; if the combined data file has already been
-#reordered, we need to get the channels in the reordering scheme
-                reorder = np.loadtxt('reorder.txt',dtype=np.uint16)
-                channels = np.where(np.lib.arraysetops.in1d(reorder,channels))[0]
-#compute covariance matrix on the full dataset
-
-
-#spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
-            """
-#gather all files to compute covariance matrix
-            """
-            if descriptorFile[:2] == '..':
-                files = glob.glob('../*_highpass.[0-9]*')
-            else:
-                files = glob.glob('*_highpass.[0-9]*')
-            """
-            sizes =  [os.stat(f).st_size for f in dataFiles]
-            total_size = ((np.array(sizes)-hs)/2/nchs).sum()
-            alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
-            offset = 0
-            for f in dataFiles:
-                print "Loading data from file %s..." %(f,)
-                sys.stdout.flush()
-                data,sr = extraction.readDataFile(f)
-                
-                #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
-                alldata[:,offset:offset+data.shape[1]] = data[channels,:]
-                alldata.flush()
-                offset+=data.shape[1]
-            
-            print "Computing inverse covariance matrix..."
-            sys.stdout.flush()
-            cinv = np.linalg.pinv(np.cov(alldata))
-            winlen = alldata.shape[1]
+            #check for the presence of a session hdf5 file
+            cfileName = '%s.hdf5' %( base,)
+            cinv = None
+            winlen = None
+            alldata = None
             if redo:
                 dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'w')
             else:
                 dataFile = h5py.File('hmmsort/%sg%.4d.hdf5' %(base,group),'a')
+            if os.path.isfile(cfileName):
+                cfile = h5py.File(cfileName,'r')
+                winlen = cfile['highpass'].shape[1]
+                alldata = cfile['highpass'][channels,:]
+                if 'highpass_cov' in cfile:
+                    c = cfile['highpass_cov'][:][channels[:,None],channels[None,:]]
+                    cinv = np.linalg.pinv(c)
+                else:
+                    highpass = cfile['highpass']
+                    C = np.cov(alldata)
+                    cinv = np.linalg.pinv(C)
+
+            if cinv == None: 
+                if os.path.isfile('%s_highpass.bin' %(base,)):
+                    nchs = descriptor['channel_status'].sum()
+                    alldata = np.memmap('%s_highpass.bin' %( base,),dtype=np.int16,shape=(nchs,data.size/nchs))
+                    alldata = alldata[channels,:]
+                else: 
+                    if '--basePath' in opts: 
+                        dataFiles = glob.glob('%s/%s_highpass.[0-9]*' % (opts.get('--basePath'),base,))
+                    else:
+                        dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
+                    #read the first data file to get the number of channels
+                    if len(dataFiles)==0:
+                        raise IOError('No datafile found')
+                    #get the header size
+                    hs = np.fromfile(dataFiles[0],dtype=np.uint32,count=1)
+                    data,sr = extraction.readDataFile(dataFiles[0])
+                    nchs = data.shape[0]
+                    #nchs = sum(descriptor['gr_nr']>0)
+                    """
+#here it becomes tricky; if the combined data file has already been
+#reordered, we need to get the channels in the reordering scheme
+                        reorder = np.loadtxt('reorder.txt',dtype=np.uint16)
+                        channels = np.where(np.lib.arraysetops.in1d(reorder,channels))[0]
+#compute covariance matrix on the full dataset
+
+
+#spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+                    """
+#gather all files to compute covariance matrix
+                    """
+                    if descriptorFile[:2] == '..':
+                        files = glob.glob('../*_highpass.[0-9]*')
+                    else:
+                        files = glob.glob('*_highpass.[0-9]*')
+                    """
+                    sizes =  [os.stat(f).st_size for f in dataFiles]
+                    total_size = ((np.array(sizes)-hs)/2/nchs).sum()
+                    alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
+                    offset = 0
+                    for f in dataFiles:
+                        print "Loading data from file %s..." %(f,)
+                        sys.stdout.flush()
+                        data,sr = extraction.readDataFile(f)
+                        
+                        #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
+                        alldata[:,offset:offset+data.shape[1]] = data[channels,:]
+                        alldata.flush()
+                        offset+=data.shape[1]
+                    
+                print "Computing inverse covariance matrix..."
+                sys.stdout.flush()
+                cinv = np.linalg.pinv(np.cov(alldata))
+                winlen = alldata.shape[1]
             try:
                 dataFile['cinv'] = cinv
                 dataFile.create_group('spikeFormsAll')
