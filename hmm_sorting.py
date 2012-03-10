@@ -22,6 +22,7 @@ import scipy.weave as weave
 import scipy.spatial as spatial
 import scipy.io as mio
 from PyNpt import extraction
+import grating_tuning as gt
 
 def formatAxis(ax):
     try:
@@ -513,7 +514,7 @@ def pdist_threshold2(a1,a2,thresh):
 
     return dist 
 
-def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
+def plotSpikes(qdata,save=False,fname='hmmSorting.pdf',tuning=False,figsize=(10,6)):
 
     allSpikes = qdata['allSpikes'] 
     unitSpikes = qdata['unitSpikes']
@@ -537,7 +538,8 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
     xch = 10 + 42*np.arange(4)
     for c in units.keys():
         ymin,ymax = (5000,-5000)
-        fig = plt.figure(figsize=(10,6))
+        fig = plt.figure(figsize=figsize)
+        fig.subplots_adjust(hspace=0.3)
         print "Unit: %s " %(str(c),)
         print "\t Plotting waveforms..."
         sys.stdout.flush()
@@ -659,6 +661,19 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf'):
         ax.plot(b[:-1],n,'k')
         ax.fill_betweenx([0,n.max()],-1.0,1.0,color='r',alpha=0.3)
         ax.set_xlabel('Lag [ms]')
+        if tuning:
+            print "\tPlotting tuning..."
+            sys.stdout.flush()
+            #attempt to get tuning for the current session, based on PWD
+            stimCounts,isiCounts,angles,spikedata = gt.getTuning(sptrain=timepoints)        
+            #reshape to number of orientations X number of reps, collapsing
+            #across everything else
+            #angles = np.append(angles,[angles[0]])
+            C = stimCounts['0'].transpose((1,0,2,3))
+            C = C.reshape(C.shape[0],C.size/C.shape[0])
+            ax = plt.subplot(2,3,6,polar=True) 
+            ax.errorbar(angles*np.pi/180,C.mean(1),C.std(1))
+
         if save:
             fn = os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/%s' % (fname.replace('.pdf','Unit%s.pdf' %(str(c),)),))
             fig.savefig(fn,bbox='tight')
