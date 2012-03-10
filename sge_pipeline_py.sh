@@ -38,7 +38,7 @@ do
 					outfile=${baseh}g$( printf %.4d $g ).$( printf %.4d $i ).$c.hdf5
 					if [ ! -e $PWD/hmmsort/$outfile ]
 					then
-						jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;SGE_TASK_ID=$c SGE_TASK_FIRST=1 SGE_TASK_LAST=$nchunks $BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --chunkSize $chunksize ;cp /tmp/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile};rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn${base}g${g}_${i}_$c -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD*| awk '{print $3}'| awk -F . '{print $1}'`
+						jobid[$i]=`echo "touch $PWD/hmmsort/${outfile};cp $PWD/${baseh}.${nr} /tmp/; cp $PWD/*descriptor.txt /tmp/; cd /tmp/;SGE_TASK_ID=$c SGE_TASK_FIRST=1 SGE_TASK_LAST=$nchunks $BINDIR/hmm_learn_tetrode.py --sourceFile $baseh.${nr} --group $g --chunkSize $chunksize ;cp /tmp/hmmsort/${outfile} ${PWD}/hmmsort/; rm /tmp/${outfile};rm /tmp/${baseh}.${nr}" | qsub -j y -V -N hmmLearn${base}g${g}_${i}_$c -o $HOME/tmp/ -e $HOME/tmp/ -l mem=5G -l s_rt=7000 -soft -l paths=*$PWD*| awk '{print $3}'| awk -F . '{print $1}'`
 					fi
 					let c=$c+1
 					outfiles=${outfiles}${outfile},
