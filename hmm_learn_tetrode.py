@@ -522,14 +522,13 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
     
     return data,spkform,p,cinv
 
-def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,chunksize=10000,debug=False,**kwargs):
+def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,chunksize=10000,debug=False,levels=4,**kwargs):
     """
     This function runs the baum-welch algorithm on the specified data, learning spiking templates. The input data should have dimensions of datapts X channels. This code runs on the data in chunks, offloading data to disk when not in use. This allows it to analyse arbitrarily long sequences of data.
     """
 
     if spkform == None:
         neurons = 8
-        levels = 4
         amp = np.random.random(size=(neurons,levels,))
         amp = amp/amp.max(1)[:,None]
         spkform = np.concatenate((np.zeros((levels,12)),np.sin(np.linspace(0,3*np.pi,states-42))[None,:].repeat(levels,0),np.zeros((levels,30))),axis=1)[None,:,:]*amp[:,:,None]*(np.median(np.abs(data),axis=0)/0.6745)[None,:,None]
@@ -729,7 +728,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     
     return data,spkform,p,cinv
 
-def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4):
+def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4,alpha=0.05):
 
     nspikes,levels,nstates = spkforms_old.shape
     xx = np.linspace(0,nstates-1,nstates*10)
@@ -740,7 +739,12 @@ def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4):
     I = np.arange(len(xx))[None,:].repeat(len(xx),0)
     for i in xrange(I.shape[0]):
         I[i] = np.roll(I[i],i)
+
+    nspikes = S.shape[0]
+    toConsider = nspikes
+    #while toConsider>0:
     while doCombine:
+
         dd = np.zeros((S.shape[0]-1,xx.shape[0]))
         for i in xrange(dd.shape[1]):
             d = S[0,:,:][None,:,:]-S[1:,:,I[i]]
@@ -755,10 +759,37 @@ def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4):
          
         #find the smallest aligned distances and merge if those distances are
         #not outlier
-        #combine spikes for which the difference is significant. Make use of the
+        #combine spikes for which the difference is insignificant. Make use of the
         #fact that the mahalanobis distance has a chi-square distribution
         #
-        midx = np.where((1-stats.chi2.cdf(D,4*600)>0.05))[0]+1
+        midx = np.where((1-stats.chi2.cdf(D,4*600)>alpha))[0]+1
+        #find the smallest distance
+        #midx = np.argmin(D)
+        #Dmin = D[midx]
+        #combine if the distance is not significant
+        #doCombine = (1-stats.chi2.cdf(Dmin,4*600))>alpha
+        """
+        if doCombine:
+            midx = np.concatenate(([0],[midx]))
+            M = (p[midx][:,None,None]*Ss[midx]).sum(0)/p[midx].sum()
+            sidx = -np.lib.arraysetops.in1d(np.arange(S.shape[0]),midx)
+            #if we are combining, replace the first waveform by the combined waveform
+            S = np.concatenate((M[None,:,:],S[sidx]),axis=0)
+            p = np.concatenate(([p[midx].sum()],p[sidx]))
+            nspikes-=1
+        else:
+            #if we are not combining shift the top waveform to the bottom
+            print "Could not combine any more"
+            sys.stdout.flush()
+            toConsider-=1
+            
+            S = np.roll(S,-1,axis=0)
+            p = np.roll(p,-1,axis=0)
+            #reset
+            doCombine = True 
+        print "Waveforms left to consider: %d" % (toConsider,)
+        sys.stdout.flush()
+        """
         if len(midx)==0:
             doCombine = False
         else:
@@ -768,6 +799,7 @@ def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4):
             M = (p[midx][:,None,None]*Ss[midx]).sum(0)/p[midx].sum()
             S = np.concatenate((S[sidx],M[None,:,:]),axis=0)
             p = np.concatenate((p[sidx],[p[midx].sum()]))
+
     #downsample before returning
     S = interpolate.interp1d(xx,S,axis=-1)(np.arange(nstates))
     return S,p
