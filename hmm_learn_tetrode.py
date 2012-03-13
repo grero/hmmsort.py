@@ -80,7 +80,7 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain=False,**kwargs):
+def learnTemplatesFromFile(dataFile,group=1,channels=None,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False,**kwargs):
     """
     Learns templates from the file pointed to by dataFile. The data should be
     stored channel wise in int16 format, i.e. the resulting array should have
@@ -101,7 +101,7 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
     #channels is the 3rd argument
     fid = open(dataFile,'r')
     header_size = np.fromfile(fid,dtype=np.uint32,count=1)
-    channels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
+    nchannels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
     sampling_rate = np.fromfile(fid,dtype=np.uint32,count=1).astype(np.float)
     #check whether the sampling rate is out of whack; if so, we try changing
     #the order
@@ -109,18 +109,22 @@ def learnTemplatesFromFile(dataFile,group=1,save=True,outfile=None,chunksize=1.5
         #rewind to read the information again
         fid.seek(4,0)
         sampling_rate = np.fromfile(fid,dtype=np.uint32,count=1).astype(np.float)
-        channels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
+        nchannels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
     sampling_rate = min(30000.0,sampling_rate)
     
     fid.close()
 
     data = np.memmap(dataFile,mode='r',dtype=np.int16,offset=header_size)
-    data = data.reshape(data.size/channels,channels)
+    data = data.reshape(data.size/nchannels,nchannels)
     head,tail = os.path.split(dataFile)
     descriptorFile = '%s_descriptor.txt' % (tail[:tail.rfind('_')],)
     #get group information form the descriptor
     descriptor = fr.readDescriptor(descriptorFile)
-    channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
+    if reorder == True:
+        reorder = np.loadtxt('reorder.txt',dtype=np.int)-1
+        data = data[:,reorder]
+    if channels == None:
+        channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
     cdata = data[:,channels]
     if divideByGain and 'gain' in descriptor:
         cdata = cdata/np.float(descriptor['gain'])
@@ -1044,7 +1048,7 @@ if __name__ == '__main__':
     import getopt
     try:
 
-        opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','fileChunkSize=','redo','basePath='])
+        opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=','minFiringRate=','outFile=','combine','chunkSize=','version=','debug','fileChunkSize=','redo','basePath=','channels=','reorder'])
 
         opts = dict(opts)
 
@@ -1056,6 +1060,20 @@ if __name__ == '__main__':
         version = int(opts.get('--version','2'))
         debug = opts.has_key('--debug')
         redo = opts.has_key('--redo')
+        reoder = opts.has_key('--reorder')
+        #parse the channel input
+        channels = None
+        if '--channels' in opts:
+            chs = opts['channels']
+            chs = chs.split(',')
+            channels = []
+            for c in chs:
+                if '-' in c:
+                    start,_,stop = sss.partition('-')
+                    channels.extend(range(int(start),int(stop)+1))
+                else:
+                    channels.append(int(c))
+
         if '--combine' in opts:
 #get all the data file, read the spkforms from each, then combine them 
             #get the descriptor, if any
