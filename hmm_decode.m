@@ -16,7 +16,7 @@
 
 function mlseq = hmm_decode(filename, patchlength, p,varargin)
 
-Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile','');
+Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile','','hdf5Path','');
 Args.flags = {'save','hdf5'};
 [Args,varargin] = getoptargs(varargin,Args);
 addpath helper_functions
@@ -29,14 +29,20 @@ try
 	if ~Args.hdf5
 		load([filename '.mat'])
 	else
-		spikeForms = hdf5read([filename '.hdf5'],'/spikeForms');
+		if isempty(Args.hdf5Path)
+			spikeForms = hdf5read([filename '.hdf5'],'/spikeForms');
+			cinv = hdf5read([filename '.hdf5'],'/cinv');
+		else
+			spikeForms = hdf5read([filename '.hdf5'], [Args.hdf5Path '/spikeForms']);
+			cinv = hdf5read([filename '.hdf5'],[Args.hdf5Path '/cinv']);
+		end
 		%need to permute
 		spikeForms = permute(spikeForms,[3,2,1]);
 		for i=1:size(spikeForms,1)
 			spkform{i} = squeeze(spikeForms(i,:,:));
 		end
 		%p = hdf5read([filename '.hdf5'],'/p');
-		cinv = hdf5read([filename '.hdf5'],'/cinv');
+		%cinv = hdf5read([filename '.hdf5'],'/cinv');
 	end
 	if ~isempty(Args.SourceFile)
 		header = ReadUEIFile('Filename',Args.SourceFile,'Header');
