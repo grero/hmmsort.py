@@ -254,7 +254,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             print "Could not open file %s..." %(saveToFile,)
             saveToFile = False
     spikeForms = {}
-    data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,**kwargs)
+    data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,levels=data.shape[1],**kwargs)
     try:
         outFile['cinv'] = cinv
     except:
