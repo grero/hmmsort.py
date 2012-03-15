@@ -33,6 +33,31 @@ np.seterr(divide='raise')
 if os.path.isdir('/Volumes/Chimera/tmp'):
     tempfile.tempdir = '/Volumes/Chimera/tmp'
 
+def gatherSpikeFormsFromGroup(group=1,sessionName=None,baseDir='hmmsort',globPattern=None):
+    if globPattern == None:
+        if sessionName == None:
+            #assume 
+
+    files = glob.glob(globPattern)
+    spikeForms = []
+    p = []
+    for f in files:
+        try:
+            dataFile = h5py.File(f,'r')
+        except:
+            continue
+        try:
+            spikeForms.extend(dataFile['after_noise']['spikeForms'][:])
+            p.extend(dataFile['after_noise']['p'][:])
+        except:
+            pass
+        finally:
+            dataFile.close()
+    spikeForms = np.array(spikeForms)
+    p = np.array(p)
+
+    return spikeForms,p
+
 def forward(g,P,spklength,N,winlength,p):
 
     code = """
