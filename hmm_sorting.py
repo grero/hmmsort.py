@@ -675,7 +675,11 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf',tuning=False,figsize=(10,
             ax.errorbar(angles*np.pi/180,C.mean(1),C.std(1))
 
         if save:
-            fn = os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/%s' % (fname.replace('.pdf','Unit%s.pdf' %(str(c),)),))
+            if not os.path.isabs(fname):
+                fn = os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/%s' % (fname.replace('.pdf','Unit%s.pdf' %(str(c),)),))
+            else:
+                fn = fname.replace('.pdf','Unit%s.pdf' %(str(c),))
+
             fig.savefig(fn,bbox='tight')
 
     if not save:
