@@ -154,9 +154,9 @@ try
 			save(fname,'Channels','-append');
 		end
 	end
-	catch
+	catch err
 		disp('An error occurred');
-		lasterror.message
+		err
 		exit(100);
 	end
 end
