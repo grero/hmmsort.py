@@ -7,9 +7,10 @@ using namespace std;
 //typedef unsigned long long int state_type;
 #ifndef WIN32
 	typedef long long int __int64;
+	typedef unsigned long long int __uint64;
 #endif
 
-	typedef __int64 state_type;
+	typedef __uint64 state_type;
 	typedef unsigned int state_identifyer;
 
 
