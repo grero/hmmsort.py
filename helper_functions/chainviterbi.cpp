@@ -110,6 +110,7 @@ vec<state_type> *generatelookuptable(state_type state, const vec<unsigned int> &
 	zero_indices.setLength(zero_count);
 	// there are 2^#0 possible ways to get to that state
 	// lookuptbl=zeros(1,2^numzeros);
+	// this causes problems if we have a lot of zeros; effectively, this only works with number of neurons <= 30;that means we'll be using about 8 GB if memory for the lookup table
 	int lookuptbllength=(1<<zero_count);
 	vec<state_type> *result = new vec<state_type>(lookuptbllength);
 
