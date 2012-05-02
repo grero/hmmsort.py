@@ -811,12 +811,15 @@ def plotXcorr(qdata,save=False,fname='hmmSortingUnits.pdf'):
                 qdata['XCorr'][units[k1]].create_dataset(units[k2],data=C,compression=2,fletcher32=True,shuffle=True)
             else:
                 C = qdata['XCorr'][units[k1]][units[k2]][:]
-            n,b = np.histogram(C,np.arange(-50,50))
+            n,b = np.histogram(C,np.arange(-50,50),normed=True)
             ax = Subplot(fig,nunits-1,nunits,k1*nunits+k2) 
             fig.add_axes(ax)
             formatAxis(ax)
             ax.plot(b[:-1],n,'k')
             ax.fill_betweenx([0,n.max()],-1.0,1.0,color='r',alpha=0.3)
+            if not (k1 == len(units)-2 and k2 == len(units)-1):
+                ax.set_xticklabels('')
+                ax.set_yticklabels('')
     if save:
         fig.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/%s' %( fname,)),bbox='tight') 
     else:
