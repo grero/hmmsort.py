@@ -790,9 +790,11 @@ def plotXcorr(qdata,save=False,fname='hmmSortingUnits.pdf'):
 
     unitTimePoints = qdata['unitTimePoints']
     samplingRate = qdata.get('samplingRate',30000.0)
-    fig = plt.figure(figsize=(10,10) )
     units = unitTimePoints.keys()
     nunits = len(units)
+    xsize = max(10,nunits*2)
+    fig = plt.figure(figsize=(xsize,(6.0/8)*xsize) )
+    fig.subplots_adjust(left=0.03,right=0.97,bottom=0.03,top=0.97)
     i = 1
     if not 'XCorr' in qdata:
         if isinstance(qdata,dict):
