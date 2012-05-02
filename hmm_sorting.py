@@ -54,6 +54,87 @@ def writeWwaveformsFile(data,fname='testwaveforms',samplingRate=29990):
     ucids[0,:].tofile('%s.cut' % (fname,),sep='\n')
 
 
+def sortBasedOnSession(psession):
+    """Sorts the spikes in this session based on already sorted spikes from a
+    previous session. This entails running the hmm_decode algorithm using
+    templaes from already sorted units"""
+    #get the name of the current session by looking for descriptor files
+    dFile = glob.glob('*_descriptor.txt')
+    if len(dFile)==0:
+        print "Could not determine current session"
+        return None
+
+    thisSessionName = dFile[0].split('/')[-1].replace('_descriptor.txt','')
+    descriptorFiles = glob.glob('%s/*_descriptor.txt' % psession)
+    if len(descriptorFiles)==0:
+        print "No descriptor found"
+        return None
+    descriptor = fr.readDescriptor(dFile[0])
+    nchs = descriptor['channel_status'].sum()
+    #get the session name from the descriptor
+    sessionName = descriptorFiles[0].split('/')[-1].replace('_descriptor.txt','')
+    groups = np.unique(descriptor['gr_nr'])
+    #we only want positive groups
+    groups = groups[groups>0]
+    #check for the presence of a sort directory
+    if not os.path.isdir('%s/sort' % psession):
+        print "No sort results found"
+        return None
+    dataFile = h5py.File('%s.hdf5' %( thisSessionName,),'a')
+    dataFile.create_group('templates')
+    #compute covariance for the current session
+    if os.path.isdir('%s/highpass' % psession):
+        highpassFiles = glob.glob('highpass/%s_highpass.*'
+                                  %(thisSessionName,))
+    else:
+        highpassFiles = glob.glob('%s_highpass.*' %(thisSessionName,))
+
+    C = None
+    if len(highpassFiles)==0:
+        print "Could not find any highpass files. "
+        print "Highpass filtering data..."
+        extraction.highpassFile('%s.bin' %( thisSessionName,))
+        highpassFiles = glob.glob('%s_highpass.*' %(thisSessionName,))
+    if len(highpassFiles)==0:
+        print "Could not find any highpass files. "
+        dataFile.close()
+        return None
+    else:
+        N = 0
+        C = np.zeros((nchs,nchs))
+        for f in highpassFiles:
+            data,sr = extraction.readDataFile(f)
+            n = data.shape[1]
+            c = np.cov(data)
+            C+=n*c
+            N+=n
+        C/=N
+    for g in groups:
+        wfFile = '%s/sort/%sg%.4dwaveforms.bin' %( psession,sessionName,g)
+        if not os.path.isfile(wfFile):
+            print "No waveformsfile found for group %d.." %(g,)
+            continue
+        #get the cutfile
+        cutFile = wfFile.replace('.bin','.cut')
+        if not os.path.isfile(cutFile):
+            print "No cut file found for group %d..." %(g,)
+            continue
+        channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==g)[0]
+        wfData = fr.readWaveformsFile(wfFile)['waveforms']
+        cids = np.loadtxt(cutFile,comments='%',dtype=np.int)
+        ucids = np.unique(cids)
+        ucids = ucids[ucids>0]
+        #now create the templates by taking the mean of each cluster
+        templates = np.array([wfData[cids==c].mean(0) for c in ucids])
+        dataFile['templates'].create_group('group%d' %g )
+        dataFile['templates']['group%d' %g]['spikeForms'] = templates
+        if C!=None:
+            dataFile['templates']['group%d' %g]['cinv'] = np.linalg.pinv(C[channels[:,None],channels[None,:]])
+        dataFile.flush()
+
+    dataFile.close()
+
+
 def processGroups(dataFilePattern=None):
     
     files = glob.glob('*_descriptor.txt')
@@ -149,27 +230,31 @@ def processFilesHDF5(pattern,outFile=None,dataFilePattern=None):
     Pattern could be any file pattern that glob understands.
     """
     files = glob.glob(pattern)
+    fidx = np.arange(len(files))
+    nparts = 1+np.arange(len(files)) 
+    gapidx = []
+    if pattern.find('*')>-1:
     #get numeric part of file names
-    P = pattern.replace('*','([0-9]*)')
-    F = ' '.join((files))
-    nparts = glob.re.findall(P,F)
-    ndigits = len(nparts[0])
-    nparts = np.array(map(int,nparts))
-    #sort
-    fidx = np.argsort(nparts)
-    #detect any gaps
-    gaps = np.diff(nparts[fidx])
-    gapidx = np.where(gaps>1)[0]
-    gaps = gaps[gapidx]
-    if len(gaps) > 0:
-        mf = np.concatenate([nparts[fidx][gapidx[i]] + np.arange(1,gaps[i]) for i in xrange(len(gaps))])
-        ps = pattern.replace('*','%.4d')
-        print "Gaps detected. The missing files are most likely:"
-        for q in mf:
-            print ps % q
-        query = raw_input('Accept [y/n]')
-        if query == 'n':
-            return {}
+        P = pattern.replace('*','([0-9]*)')
+        F = ' '.join((files))
+        nparts = glob.re.findall(P,F)
+        ndigits = len(nparts[0])
+        nparts = np.array(map(int,nparts))
+        #sort
+        fidx = np.argsort(nparts)
+        #detect any gaps
+        gaps = np.diff(nparts[fidx])
+        gapidx = np.where(gaps>1)[0]
+        gaps = gaps[gapidx]
+        if len(gaps) > 0:
+            mf = np.concatenate([nparts[fidx][gapidx[i]] + np.arange(1,gaps[i]) for i in xrange(len(gaps))])
+            ps = pattern.replace('*','%.4d')
+            print "Gaps detected. The missing files are most likely:"
+            for q in mf:
+                print ps % q
+            query = raw_input('Accept [y/n]')
+            if query == 'n':
+                return {}
 
     data = h5py.File(outFile,'a')
     data.create_dataset('dataSize',data=np.zeros((1,),dtype=np.int))
@@ -229,7 +314,7 @@ def processFilesHDF5(pattern,outFile=None,dataFilePattern=None):
                         if fidx[fi] in gapidx:
                             #we have a gap; i.e. the next file is missing. In that
                             #case, we have to offset by more
-                            data[ks]+=gaps[gapidx==fidx[fi]]*qdata[k]
+                            data[ks][0]+=data[ks][0]+gaps[gapidx==fidx[fi]]*qdata[k]
                         else:
                             data[ks][0]+=qdata[k]
                     else:
@@ -334,10 +419,7 @@ def processData(fname,dataFile=None):
         noverlapPts = spikeForms.shape[0]*spikeForms.shape[-1]
         #find the total number of states (including overlaps) involved in each
         #spike
-        #pidx = np.append([0],np.append(np.where(np.diff(idx)>1)[0]+1,[len(idx)]))
-        #cidx =np.diff(pidx)
         #get the start and the end points of each compound spike
-        #spikeStart = np.where((seq==1).any(0)*(seq<=1).all(0))[0]
         #make sure to exclude spikes that start towards the end of the
         #file;these will not have an ending point
         #spikeStart = spikeStart[spikeStart<seq.shape[1]-spikeForms.shape[-1]]
@@ -398,12 +480,22 @@ def processData(fname,dataFile=None):
         if data == None:
             if dataFile != None:
                 data,sr = extraction.readDataFile(dataFile)
+                #reordering
+                if os.path.isfile('reorder.txt'):
+                    reorder = np.loadtxt('reorder.txt',dtype=np.int)-1
+                    if reorder.max()>=data.shape[0]:
+                        rdata=np.zeros((reorder.max()+1,data.shape[1]))
+                        rdata[reorder,:] = data
+                        data = rdata
+                        del rdata
                 data = data.T
                 dataSize = data.shape[0]
                 if 'Channels' in sortData:
                     #subtract 1 because we are dealing with matlab base-1 indexing
                     channels = sortData['Channels'][:].flatten().astype(np.int)-1
                     data = data[:,channels]
+                else:
+                    channels = np.arange(data.shape[1])
             else:
                 print "Sorry, no data found. Exiting..."
                 if mustClose:
@@ -533,9 +625,9 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf',tuning=False,figsize=(10,
     data = dataFile['data'][:]
     """
     keys = np.array(units.keys())
-    x = np.arange(32)[None,:] + 42*np.arange(4)[:,None]
-    xt = np.linspace(0,31,spikeForms.shape[-1])[None,:] + 42*np.arange(4)[:,None]
-    xch = 10 + 42*np.arange(4)
+    x = np.arange(32)[None,:] + 42*np.arange(spikeForms.shape[1])[:,None]
+    xt = np.linspace(0,31,spikeForms.shape[-1])[None,:] + 42*np.arange(spikeForms.shape[1])[:,None]
+    xch = 10 + 42*np.arange(len(channels))
     for c in units.keys():
         ymin,ymax = (5000,-5000)
         fig = plt.figure(figsize=figsize)
@@ -563,7 +655,8 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf',tuning=False,figsize=(10,
         #find the minimum point for this template
         ich = spikeForms[int(c)].min(1).argmin()
         ix = spikeForms[int(c)][ich,:].argmin()
-        plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
+        #plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
+        plt.plot(x.T,np.roll(spikeForms[int(c)],10-ix,axis=1)[:,:32].T,'r')
         for i in xrange(x.shape[0]):
             plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
         yl = ax.get_ylim()
@@ -574,12 +667,14 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf',tuning=False,figsize=(10,
         ax = Subplot(fig,2,3,2)
         fig.add_axes(ax)
         formatAxis(ax)
-        m =  allspikes[:][nonOverlapIdx,:,:].mean(0)
-        s =  allspikes[:][nonOverlapIdx,:,:].std(0)
-        plt.plot(x.T,m,'k',lw=1.5)
-        plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
-        for i in xrange(x.shape[0]):
-            plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
+        if len(nonOverlapIdx)>0:
+            m =  allspikes[:][nonOverlapIdx,:,:].mean(0)
+            s =  allspikes[:][nonOverlapIdx,:,:].std(0)
+            plt.plot(x.T,m,'k',lw=1.5)
+            for i in xrange(x.shape[0]):
+                plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
+        #plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
+        plt.plot(x.T,np.roll(spikeForms[int(c)],10-ix,axis=1)[:,:32].T,'r')
         yl = ax.get_ylim()
         ymin = min(ymin,yl[0])
         ymax = max(ymax,yl[1])
@@ -590,13 +685,14 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf',tuning=False,figsize=(10,
         ax = Subplot(fig,2,3,3)
         fig.add_axes(ax)
         formatAxis(ax)
-
-        m =  allspikes[:][overlapIdx,:,:].mean(0)
-        s =  allspikes[:][overlapIdx,:,:].std(0)
-        plt.plot(x.T,m,'k',lw=1.5)
-        plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
-        for i in xrange(x.shape[0]):
-            plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
+        if len(overlapIdx)>0:
+            m =  allspikes[:][overlapIdx,:,:].mean(0)
+            s =  allspikes[:][overlapIdx,:,:].std(0)
+            plt.plot(x.T,m,'k',lw=1.5)
+            for i in xrange(x.shape[0]):
+                plt.fill_between(x[i],m[:,i]-s[:,i],m[:,i]+s[:,i],color='b',alpha=0.5)
+        #plt.plot(x.T,spikeForms[int(c)][:,ix-10:ix+22].T,'r')
+        plt.plot(x.T,np.roll(spikeForms[int(c)],10-ix,axis=1)[:,:32].T,'r')
         yl = ax.get_ylim()
         ymin = min(ymin,yl[0])
         ymax = max(ymax,yl[1])
@@ -632,7 +728,7 @@ def plotSpikes(qdata,save=False,fname='hmmSorting.pdf',tuning=False,figsize=(10,
         #get xticklabels
         xl,xh = int(np.round((b[0]-0.5)*2))/2,int(np.round((b[-1]+0.5)*2))/2
         xl = -0.5
-        dx = np.round((xh-xl)/5.0)
+        dx = np.round(10.0*(xh-xl)/5.0)/10
         xt_ = np.arange(xl,xh+1,dx)
         ax.set_xticks(xt_)
         ax.set_xticklabels(map(lambda s: r'$10^{%.1f}$' % (s,),xt_))
@@ -774,6 +870,120 @@ def isolationDistance(c,fdata,cids,ncids=None):
         return Ds[npoints-1]/dm
     else:
         return Ds[-1]/dm
+
+def plotISIDistributions(sessions,groups=None,sessionTypes=None,samplingRate=30000.0,save=False,fname=None,figsize=(10,6)):
+    """Plots the isi distributions for all the cells in the given sessions"""
+    fig = plt.figure(figsize=figsize)
+    fig.subplots_adjust(left=0.05,right=.95)
+    ISIs = {}
+    ncells = 0
+    if sessionTypes != None:
+        sessionTypes = dict(zip(sessions,sessionTypes))
+    for g in groups:
+        for s in sessions:
+            dataFile = h5py.File(os.path.expanduser('~/Documents/research/data/spikesorting/hmm/p=1e-20/%sg%.4d.hdf5' % (s,g)),'r')
+            try:
+                for c in dataFile['unitTimePoints'].keys():
+                    isi = np.log(np.diff(dataFile['unitTimePoints'][c][:]/(samplingRate/1000)))
+                    cn = 'g%dc%d' % (g,int(c))
+                    if cn in ISIs:
+                        ISIs[cn]['%s' %(s,)] = isi
+                    else:
+                        ISIs[cn] = {'%s' %(s,): isi}
+            finally:
+                dataFile.close()
+        
+    i = 1
+    ncells = len(ISIs.keys())
+    for c in ISIs.keys():
+        ax = Subplot(fig,1,ncells,i)
+        formatAxis(ax)
+        fig.add_axes(ax)
+        ax.set_title(c)
+        for k,v in ISIs[c].items():
+            if sessionTypes != None:
+                L = sessionTypes[k]
+            else:
+                L = k
+            n,b = np.histogram(v,bins=20,normed=True)
+            plt.plot(b[:-1],n,label=L)
+        i+=1
+        ax.set_xlabel('ISI [ms]')
+        xl,xh = int(np.round((b[0]-0.5)*2))/2,int(np.round((b[-1]+0.5)*2))/2
+        xl = -0.5
+        dx = np.round(10.0*(xh-xl)/4.0)/10
+        xt_ = np.arange(xl,xh+1,dx)
+        ax.set_xticks(xt_)
+        ax.set_xticklabels(map(lambda s: r'$10^{%.1f}$' % (s,),xt_))
+
+    fig.axes[-1].legend()
+    if save:
+        if fname == None:
+            fname = os.path.expanduser('~/Documents/research/figures/isi_comparison.pdf')
+        fig.savefig(fname,bbox='tight')
+
+def plotSpikeCountDistributions(sessions,groups=None,sessionTypes=None,samplingRate=30000.0,save=False,windowSize=40,fname=None,figsize=(10,6)):
+    """Plots the isi distributions for all the cells in the given sessions"""
+    fig = plt.figure(figsize=figsize)
+    fig.subplots_adjust(left=0.05,right=.95)
+    spikeCounts = {}
+    ncells = 0
+    nz = {}
+    if sessionTypes != None:
+        sessionTypes = dict(zip(sessions,sessionTypes))
+    for g in groups:
+        for s in sessions:
+            dataFile = h5py.File(os.path.expanduser('~/Documents/research/data/spikesorting/hmm/p=1e-20/%sg%.4d.hdf5' % (s,g)),'r')
+            try:
+                for c in dataFile['unitTimePoints'].keys():
+                    sptrain = dataFile['unitTimePoints'][c][:]/(samplingRate/1000)
+                    nbins = sptrain.max()/windowSize
+                    bins,bs = np.linspace(0,sptrain.max(),nbins,retstep=True)
+                    sc,bins = np.histogram(sptrain,bins)
+                    cn = 'g%dc%d' % (g,int(c))
+                    sl = s
+                    if sessionTypes != None:
+                        sl = sessionTypes[s]
+                    if cn in spikeCounts:
+                        spikeCounts[cn]['%s' %(s,)] = {'counts': sc, 'bins':bins}
+                        nz[cn]['%s' %( sl,)] = 1.0*sum(sc==0)/len(sc)
+                    else:
+                        spikeCounts[cn] = {'%s' %(s,):  {'counts':sc,'bins':bins}}
+                        nz[cn] = {'%s' %(sl,): 1.0*sum(sc==0)/len(sc)}
+            finally:
+                dataFile.close()
+        
+    i = 1
+    ncells = len(spikeCounts.keys())
+    nsessions = len(sessions)
+    colors = ['b','r','g','y','c','m']
+    for c in spikeCounts.keys():
+        ax = Subplot(fig,1,ncells,i)
+        formatAxis(ax)
+        fig.add_axes(ax)
+        ax.set_title(c)
+        j = 0
+        for k,v in spikeCounts[c].items():
+            #n,b = np.histogram(v['counts'],bins=20,normed=True)
+            #plt.plot(b[:-1],n,label=k)
+            if sessionTypes != None:
+                L = sessionTypes[k]
+            else:
+                L = k
+            n = np.bincount(v['counts'])
+            b = np.unique(v['counts'])
+            b = np.arange(b[0],len(n))
+            ax.bar(b+j*0.2,1.0*n/n.sum(),align='center',width=0.3,fc=colors[j],label=L)
+            j+=1
+        i+=1
+        ax.set_xlabel('Spike counts')
+    fig.axes[-1].legend()
+    if save:
+        if fname == None:
+            fname = os.path.expanduser('~/Documents/research/figures/isi_comparison.pdf')
+        fig.savefig(fname,bbox='tight')
+
+    return nz
 
 def findBest3DProjection(fdata,cids):
     
