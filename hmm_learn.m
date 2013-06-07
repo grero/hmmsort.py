@@ -14,43 +14,76 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function [data, spkform, cinv, p] = hmm_learn(filename,saveas)
+function [data, spkform, cinv, p] = hmm_learn(filename,varargin)
 
 %% specify parameters for preprocessing the data
-
-levels=2; % D of the final data to sort
-states=60; % how many states per ring
+Args = struct('Channels',[],'outFileName','','highpass',0,'upsample',0,'wavelet',0);
+Args.flags={'highapss','upsample','wavelet'};
+[Args,varargin] = getoptargs(varargin,Args)
+outFileName = Args.outFileName;
+if ~isempty(outFileName)
+	%make sure we can save the file
+	fid = fopen(outFileName,'w');
+	fclose(fid);
+end
+%get the header
+D = ReadUEIFile('Filename',filename,'header');
+%use memmap to read the data
+M = memmapfile(filename,'format','int16','offset',D.headerSize);
+if ~isempty(Args.Channels)
+	if ischar(Args.Channels)
+		Args.Channels = str2num(Args.Channels);
+	end
+	%data = ReadUEIFile('Filename',filename,'units','daqunits','channels',Args.Channels);
+	data = zeros(length(Args.Channels),size(M.Data,1)/D.numChannels);
+	for ch=1:length(Args.Channels)
+		data(ch,:) = M.Data(Args.Channels(ch):D.numChannels:end);
+	end
+else
+	%data = ReadUEIFile('Filename',filename,'units','daqunits');
+	data = double(reshape(M.data,D.numChannels,size(M.Data,1)/D.numChannels));
+end
+scanrate = D.samplingRate;
+levels=size(data,1); % D of the final data to sort
+states=ceil(scanrate/1000); % how many states per ring
 winstart=1; % where should we start learning
-winlength=72000; % how long should the window be, that we learn on
+winlength=size(data,2)-1; % how long should the window be, that we learn on
 % % scanrate=24000; % what is the scanrate of the data
 
 %-------------------------------------------------------------
-scanrate=30000; % what is the scanrate of the data                                          %Yasamin
+%scanrate=30000; % what is the scanrate of the data                                          %Yasamin
 %-------------------------------------------------------------
 
 splitp=.5/scanrate; % firingrate limit, where we discard a spikeform
 neurons=8; % how many neurons do we initialize
 iterations=6; % how many iterations of
-scanrate = 40000;
+%scanrate = 40000;
 upsample_factor = 1;
 tolerance = 20;
 small_thresh = 1;
 
-
 % load the file to sort
-load(filename);
+%load(filename);
 % subtract the mean on all channels, each channel should be mean zero
 data=data-repmat(mean(data,2),1,size(data,2));
+
 
 
 %% preprocess the data... filter, upsample, add cwt channel...
 
 % bandpass filter between 100 Hz and 6 kHz
-data = ftfil(data,scanrate,100,6000);
-% upsample
-data = spline(1:length(data),data,1:1/upsample_factor:length(data));
-% add a channel with continuous wavelet transform
-data=[data;cwt(data,1,'db2')];
+if Args.highpass
+	data = ftfil(data,scanrate,100,6000);
+end
+if Args.upsample
+	% upsample
+	data = spline(1:length(data),data,1:1/upsample_factor:length(data));
+end
+if Args.wavelet
+	% add a channel with continuous wavelet transform
+	data=[data;cwt(data,1,'db2')];
+	levels=levels+1;
+end
 % the range on all channels is equalized - this change is cosmetical.
 % % scale=max(data,[],2);
 % % data=data./repmat(scale,1,size(data,2));
@@ -62,13 +95,19 @@ data=[data;cwt(data,1,'db2')];
 % large, this leads to poor convergence. (the more channels, the smaller
 % amplitude)
 spkform = cell(1,neurons);
+prestates = ceil(states/3);
+poststates = ceil(states/3);
+midstates = states-prestates-poststates;
 for i=1:neurons
-    spkform{i}=[zeros(levels,12) repmat(sin(linspace(0,3*pi,states-42)),levels,1) ...
-        zeros(levels,30)].*repmat(abs(rand(levels,1).*[1;.5])...
+	amps = rand(levels,1);
+	amps = 5*amps/max(amps);
+    spkform{i}=[zeros(levels,prestates) repmat(sin(linspace(0,3*pi,midstates)),levels,1) ...
+        zeros(levels,poststates)].*repmat(abs(rand(levels,1))...
         *5.*median(abs(data),2)/0.6745,1,states);
 end
 % calculate the inverse of the covariance matrix of the data
 cinv = pinv(cov(data'));
+% remove outliers
 
 % all the initial parameters are now fixed. data, spkform, cinv...
 
@@ -156,7 +195,13 @@ figure(100);clf;ndplot(W);
 
 disp(['found ' num2str(length(spkform)) ' different neurons:']);
 if nargin >1
-    save(saveas,'data','cinv','spkform');
+	try
+    %save(outFileName,'data','cinv','spkform');
+    save(outFileName,'spkform','cinv');
+	catch e
+		e
+		e.message
+	end
 end
 
 end
@@ -367,8 +412,8 @@ if nargin<4
     limit=size(forms{1},2)*3;
 else
     tmp=size(forms{1},2);
-    test=zeros(1,500);
-    for i=1:500
+    test=zeros(1,1500);
+    for i=1:1500
         test(i)=sum(sum(data(:,(i-1)*tmp+1:i*tmp)...
             .*(cinv*data(:,(i-1)*tmp+1:i*tmp))));
     end
@@ -380,6 +425,9 @@ end
 j=0;
 ind=[];
 woe=zeros(1,length(forms));
+pp = [];
+ind = [];
+spkform = {};
 
 for i=1:length(forms)
     woe(i)=sum(sum(forms{i}.*(cinv*forms{i})));
