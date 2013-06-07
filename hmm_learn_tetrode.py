@@ -37,6 +37,7 @@ def gatherSpikeFormsFromGroup(group=1,sessionName=None,baseDir='hmmsort',globPat
     if globPattern == None:
         if sessionName == None:
             #assume 
+            pass
 
     files = glob.glob(globPattern)
     spikeForms = []
@@ -105,7 +106,7 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=1,channels=None,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False,**kwargs):
+def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False,**kwargs):
     """
     Learns templates from the file pointed to by dataFile. The data should be
     stored channel wise in int16 format, i.e. the resulting array should have
@@ -121,7 +122,7 @@ def learnTemplatesFromFile(dataFile,group=1,channels=None,save=True,outfile=None
     """
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
-        return [],[]
+        return [], []
     
     #channels is the 3rd argument
     fid = open(dataFile,'r')
@@ -132,32 +133,42 @@ def learnTemplatesFromFile(dataFile,group=1,channels=None,save=True,outfile=None
     #the order
     if sampling_rate > 1e5:
         #rewind to read the information again
-        fid.seek(4,0)
-        sampling_rate = np.fromfile(fid,dtype=np.uint32,count=1).astype(np.float)
-        nchannels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
+        fid.seek(4, 0)
+        sampling_rate = np.fromfile(fid,dtype=np.uint32,
+                                    count=1).astype(np.float)
+        nchannels = np.fromfile(fid,dtype=np.uint8,
+                                count=1).astype(np.uint32)
     sampling_rate = min(30000.0,sampling_rate)
     
     fid.close()
 
-    data = np.memmap(dataFile,mode='r',dtype=np.int16,offset=header_size)
-    data = data.reshape(data.size/nchannels,nchannels)
+    data,sr = extraction.readDataFile(dataFile)
     head,tail = os.path.split(dataFile)
     descriptorFile = '%s_descriptor.txt' % (tail[:tail.rfind('_')],)
-    #get group information form the descriptor
-    descriptor = fr.readDescriptor(descriptorFile)
+    if not os.path.isfile(descriptorFile):
+        descriptor = {'gr_nr': np.arange(1,nchannels+1),
+                      'ch_nr':np.arange(nchannels),
+                      'channel_status': np.ones((nchannels,),dtype=np.bool)}
+    else:
+        #get group information form the descriptor
+        descriptor = fr.readDescriptor(descriptorFile)
     if reorder == True:
         reorder = np.loadtxt('reorder.txt',dtype=np.int)-1
-        data = data[:,reorder]
+        data = data[reorder, :]
     if channels == None:
         channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
-    cdata = data[:,channels]
+    else:
+        group = descriptor['gr_nr'][np.lib.arraysetops.in1d(descriptor['ch_nr'],channels)]
+        group = np.unique(group)
+    cdata = data[channels, :].T.copy(order='C')
+    del data
     if divideByGain and 'gain' in descriptor:
         cdata = cdata/np.float(descriptor['gain'])
     if nFileChunks!=None and fileChunkId!=None:
         #we should only process parts of the file
         fileChunkSize = np.ceil(1.0*cdata.shape[0]/nFileChunks)
     
-        cdata = cdata[fileChunkId*fileChunkSize:(fileChunkId+1)*fileChunkSize,:]
+        cdata = cdata[fileChunkId*fileChunkSize:(fileChunkId+1)*fileChunkSize, :]
     if save:
         if outfile == None:
             name,ext = os.path.splitext(tail)
@@ -239,7 +250,8 @@ def learnTemplatesFromFile(dataFile,group=1,channels=None,save=True,outfile=None
 
     return spikeForms,cinv
 
-def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,saveToFile=False,redo=False,**kwargs):
+def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,
+                   saveToFile=False,redo=False,iterations=3,**kwargs):
     """ 
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -253,7 +265,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 p   :   the estimated probability of firing for each template
     """
     if debug:
-        plt.figure(figsize=(6,10))
+        plt.figure(figsize=(6, 10))
     if samplingRate == None:
         samplingRate = 30000.0
     if splitp == None:
@@ -265,7 +277,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         #open a file to save the spkforms to
         pass
     #version 2 uses chunking more aggressively, and does not make heavy use of memory maps
-    if version==2:
+    if version == 2:
         learnf = learndbw1v2
     else:
         learnf = learndbw1
@@ -276,10 +288,11 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 print "Data already exists and redo was not requested. Skipping..."
                 return None,None
         except IOError:
-            print "Could not open file %s..." %(saveToFile,)
+            print "Could not open file %s..." % (saveToFile,)
             saveToFile = False
     spikeForms = {}
-    data,spkform,p,cinv = learnf(data,iterations=1,debug=debug,levels=data.shape[1],**kwargs)
+    data,spkform,p,cinv = learnf(data,iterations=iterations,debug=debug,
+                                 levels=data.shape[1],**kwargs)
     try:
         outFile['cinv'] = cinv
     except:
@@ -388,11 +401,11 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             print "Included because of sigma: "
             s = ['%d ' %(i,) for i in idx]
             print s
+            spikeForms['second_learning']['after_noise'] = {'spikeForms':spkform,'p':p}
         if saveToFile:
             outFile.close()
             
     return spikeForms,cinv
-    return spkform,p,cinv
 
 
 def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,**kwargs):
@@ -524,18 +537,18 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         if dosplit:
             for i in xrange(len(spkform)):
                 if p[i] < splitp:
-                    try:
-                        j = np.where((p>=np.median(p))*(p > splitp*4)*(maxamp>10))[0]
-                        j = j[np.random.random_integers(size=(1,1,len(j)))]
-                        W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength-1)+1:j*(spklength-1)]*.98
-                        p[i] = p[j]/2
-                        p[j] =p[j]/2
-                        print "Waveformsupdate: %d <- %d" % (i,j)
-                        sys.stdout.flush()
-                        break
-                    except:
-                        print "Clustersplitting failed"
-                        sys.stdout.flush()
+                    #try:
+                    j = np.where((p>=np.median(p))*(p > splitp*4)*(maxamp>10))[0]
+                    j = j[np.random.random_integers(size=(1,1,len(j)))]
+                    W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength-1)+1:j*(spklength-1)]*.98
+                    p[i] = p[j]/2
+                    p[j] =p[j]/2
+                    print "Waveformsupdate: %d <- %d" % (i,j)
+                    sys.stdout.flush()
+                    break
+                    #except:
+                    #    print "Clustersplitting failed"
+                    #    sys.stdout.flush()
 
         for j in xrange(len(spkform)):
             plt.subplot(neurons,1,j+1)
@@ -555,13 +568,15 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     """
     This function runs the baum-welch algorithm on the specified data, learning spiking templates. The input data should have dimensions of datapts X channels. This code runs on the data in chunks, offloading data to disk when not in use. This allows it to analyse arbitrarily long sequences of data.
     """
-
+    prestates = states/3
+    poststates = states/3
     if spkform == None:
         neurons = 8
-        amp = np.random.random(size=(neurons,levels,))
-        amp = amp/amp.max(1)[:,None]
-        spkform = np.concatenate((np.zeros((levels,12)),np.sin(np.linspace(0,3*np.pi,states-42))[None,:].repeat(levels,0),np.zeros((levels,30))),axis=1)[None,:,:]*amp[:,:,None]*(np.median(np.abs(data),axis=0)/0.6745)[None,:,None]
-        #spkform = spkform[None,:,:].repeat(8,0)
+        amp = np.random.random(size=(neurons,levels))+0.5
+        #amp = amp/amp.max(1)[:, None]
+        spkform = np.concatenate((np.zeros((levels, prestates)),
+                                  np.sin(np.linspace(0,3*np.pi,prestates))[None,:].repeat(levels,0),
+                                  np.zeros((levels,poststates))),axis=1)[None,:,:]*amp[:,:,None]*(np.median(np.abs(data),axis=0)/0.6745)[None,:,None]
     else:
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
@@ -572,7 +587,11 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         plt.draw()
     N = len(spkform)
     if cinv == None:
-        c = np.linalg.pinv(np.cov(data.T))
+        if data.shape[1]>1:
+            c = np.linalg.pinv(np.cov(data.T))
+        else:
+            #single dimension
+            c = 1.0/data.var(0)
     else:
         c = cinv
     if p == None:
@@ -582,25 +601,18 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             p = p.repeat(N,0)
 
     if splitp == None:
-        splitp = 3.0/40000
+        splitp = .5/40000
 
-    """
-    if p.shape[0] > p.shape[1]:
-        p = p.T
-    """
     p_reset = p
     
     winlength,dim = data.shape
     spklength = spkform.shape[-1]
-    #W = np.zeros((dim,N*(spklength-1)+1))
     W = spkform[:,:,1:].transpose((1,0,2)).reshape(dim,N*(spklength-1))
     W = np.concatenate((np.zeros((dim,1)),W),axis=1)
     """
     for i in xrange(N):
         W[:,1+(spklength-1)*i:(i+1)*(spklength-1)] = spkform[i,:,1:]
    """ 
-    #g = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
-    #fit = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
     #this is an index vector
     q = np.concatenate(([N*(spklength-1)],np.arange(N*(spklength-1))),axis=0)
     tiny = np.exp(-700)
@@ -609,48 +621,34 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     chunksizes = np.diff(chunks)
     nchunks = len(chunksizes)
     for bw in xrange(iterations):
+        print "Iteration %d" % (bw, )
+        sys.stdout.flush()
         fid = tempfile.TemporaryFile()
         p = p_reset
-        #g = np.zeros((N*(spklength-1)+1,winlength))
         g = np.zeros((N*(spklength-1)+1,chunksize))
-        #fit = np.zeros(g.shape)
         b = np.zeros((g.shape[0],))
         g[0,0] = 1
         b[0] = 1
         #compute probabilities  
         #note that we are looping over number of states here; the most we are
         #creating is 2Xdata.nbytes
-        """
-        for i in xrange(W.shape[1]):
-            X = W[:,i][:,None] - data.T.astype(np.float)
-            fit[i,:] = np.exp(-0.5*(X*np.dot(c,X)).sum(0))
-            #remove X
-            del X
-        """
-        #X = W[:,:,None]-data.T[:,None,:]
-        #fit = np.exp(-0.5*(X*np.dot(c,X.transpose((1,0,2))).sum(0)).sum(0))
-        #F = np.array(fit.tolist()).reshape(fit.shape)
-        #G = forward(g,F,spklength,N,winlength,p)
-        #g = np.zeros((N*(spklength-1)+1,winlength))
-        #g[0,0] = 1
         #forward
-        print "Running forward algorithm..."
+        print "\tRunning forward algorithm..."
         sys.stdout.flush()
         #do this in chunks
         for i in xrange(nchunks):
-            print "Analyzing chunk %d of %d" % (i+1,nchunks) 
+            print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
             for t in xrange(1,chunksizes[i]):
                 a = chunks[i]+t
                 y = W-data[a,:][:,None]
                 f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))+tiny
-                g[:,t] = g[q,t-1]
-                g[0,t] = g[1:2+(N-1)*(spklength-1):(spklength-1),t].sum() + g[0,t] - g[0,t-1]*p.sum()
-                g[1:2+(N-1)*(spklength-1):(spklength-1),t] = g[0,t-1]*p
-                #g[:,t] = g[:,t]*fit[:,t]
-                g[:,t] = g[:,t]*f[:] + tiny
-                g[:,t] = g[:,t]/(g[:,t].sum()+tiny)
+                g[:, t] = g[q, t - 1]
+                g[0, t] = g[1:2 + (N - 1)*(spklength - 1):(spklength - 1), t].sum() + g[0, t] - g[0, t - 1]*p.sum()
+                g[1:2 + (N - 1) * (spklength - 1):(spklength - 1), t] = g[0, t - 1] * p
+                g[:, t] = g[:,t]*f[:] + tiny
+                g[:, t] = g[:, t] / (g[:, t].sum()+tiny)
             #store to file and reset for the next chunk
-            g=g[:,:chunksizes[i]]
+            g = g[:, :chunksizes[i]]
             try:
                 g.tofile(fid)
             except ValueError:
@@ -664,96 +662,112 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                     #only exit if we are running this as a script
                     sys.exit(99)
 
-            g[:,0] = g[:,-1]
+            g[:, 0] = g[:, -1]
 
         #backward
-        print "Running backward algorithm..."
+        print "\tRunning backward algorithm..."
         sys.stdout.flush()
-        G = np.zeros((g.shape[0],)) 
-        for i in xrange(nchunks-1,-1,-1):
-            print "Analyzing chunk %d of %d" % (i+1,nchunks) 
-            a = chunks[i]*(N*(spklength-1)+1)
-            fid.seek(a*g[0,0].nbytes,0)
-            g = np.fromfile(fid,dtype=np.float,count=(N*(spklength-1)+1)*chunksizes[i])
-            g = g.reshape(N*(spklength-1)+1,chunksizes[i])
-            for t in xrange(chunksizes[i]-2,-1,-1):
-                a = chunks[i]+t+1
-                y = W-data[a,:][:,None]
-                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0)) + tiny
-                #b = b*fit[:,t+1]
+        G = np.zeros((g.shape[0], )) 
+        for i in xrange(nchunks - 1, -1, -1):
+            print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks) 
+            a = chunks[i]*(N*(spklength - 1) + 1)
+            fid.seek(a*g[0, 0].nbytes, 0)
+            g = np.fromfile(fid, dtype=np.float,
+                            count=(N*(spklength - 1) + 1)*chunksizes[i])
+            g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
+            for t in xrange(chunksizes[i] - 2, -1, -1):
+                a = chunks[i] + t + 1
+                y = W - data[a, :][: ,None]
+                f = np.exp(-0.5*(y*np.dot(c, y)).sum(0)) + tiny
                 b = b*f[:] + tiny
                 b[q] = b
-                b[0] = (1-p.sum())*b[-1] + np.dot(p,b[:(N-1)*(spklength-1)+1:(spklength-1)].T)
-                b[(spklength-1):1+(N-1)*(spklength-1):(spklength-1)] = b[-1]
-                b = b/(b.sum()+tiny)
-                g[:,t] = g[:,t]*b + tiny
-            g = g/(g.sum(0)+tiny)
-            G+=g.sum(1)
+                b[0] = ((1 - p.sum())*b[-1] +
+                        np.dot(p,b[:(N-1)*(spklength - 1) + 1:(spklength - 1)].T))
+                b[(spklength - 1):1 + (N - 1)*(spklength - 1):(spklength - 1)] = b[-1]
+                b = b / (b.sum() + tiny)
+                g[:,t] = g[:,t] * b + tiny
+            g = g / (g.sum(0) + tiny)
+            G += g.sum(1)
             #rewind file
-            fid.seek(-(N*(spklength-1)+1)*chunksizes[i]*g[0,0].nbytes,1)
+            fid.seek(-(N*(spklength - 1) + 1)*chunksizes[i]*g[0, 0].nbytes, 1)
             g.tofile(fid)
         
-        #g = g/(g.sum(0)+tiny)[None,:]
         #TODO: This stop could be quite memory intensive
-        #W = np.dot(data.T,g.T)/g.sum(1)[None,:]
         W = np.zeros(W.shape)
         fid.seek(0)
         for i in xrange(nchunks):
-            g = np.fromfile(fid,dtype=np.float,count=(N*(spklength-1)+1)*chunksizes[i]).reshape(N*(spklength-1)+1,chunksizes[i])
-            W+=np.dot(data[chunks[i]:chunks[i+1],:].T,g.T)
-        W = W/G[None,:]
+            g = np.fromfile(fid,dtype=np.float,
+                            count=(N*(spklength-1)+1)*
+                            chunksizes[i]).reshape(N*(spklength-1)+1, 
+                            chunksizes[i])
+            W += np.dot(data[chunks[i]:chunks[i+1], :].T, g.T)
+        W = W / G[None,:]
         W[:,0] = 0
-        p = np.zeros((N,))
+        p = np.zeros((N, ))
         fid.seek(0)
         D = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=data.shape,mode='w+')
         for i in xrange(nchunks):
-            g = np.fromfile(fid,dtype=np.float,count=(N*(spklength-1)+1)*chunksizes[i])
-            g = g.reshape(N*(spklength-1)+1,chunksizes[i])
-            p+= g[1::(spklength-1),:].sum(1)
-            fid.seek(g.nbytes,0)
-            D[chunks[i]:chunks[i+1],:] = (W[:,:,None]*g[None,:,:]).sum(1).T
+            g = np.fromfile(fid, dtype=np.float,
+                            count=(N*(spklength - 1) + 1)*chunksizes[i])
+            g = g.reshape(N*(spklength-1) + 1, chunksizes[i])
+            p+= g[1::(spklength - 1),:].sum(1)
+
+            D[chunks[i]:chunks[i+1], :] = (W[:, :, None]*g[None, :, :]).sum(1).T
         fid.close() 
-        p=p/winlength
-        
-        cinv = np.linalg.pinv(np.cov((data-D).T))
+        p=p / winlength
+        if data.shape[1] > 1:
+            cinv = np.linalg.pinv(np.cov((data-D).T))
+        else:
+            cinv = 1.0/(data-D).var(0)
        
         maxamp = np.zeros((len(spkform),))
         for j in xrange(len(spkform)):
-            spkform[j] = np.concatenate((W[:,0][:,None],W[:,j*(spklength-1)+1:(j+1)*(spklength-1)+1]),axis=1)
-            maxamp[j] = (spkform[j]*(np.dot(cinv,spkform[j]))).sum(0).max(0)
+            spkform[j] = np.concatenate((W[:,0][:,None],
+                                         W[:,j*(spklength-1)+1:(j+1)*(spklength-1)+1]),
+                                        axis=1)
+            maxamp[j] = (spkform[j]*(np.dot(cinv, spkform[j]))).sum(0).max(0)
 
         nspikes = p*winlength
 
-        print "Spikes found per template: " 
+        print "\tSpikes found per template: " 
         print ' '.join((map(lambda s: '%.2f' %s,nspikes)))
         sys.stdout.flush()
         if dosplit:
+            #remove templates with too low firing rate and replace with a new
+            #guess
+            print "\tTrying to split clusters..."
             for i in xrange(len(spkform)):
                 if p[i] < splitp:
+                    #remove template i and replace with template j
                     try:
-                        j = np.where((p>=np.median(p))*(p > splitp*4)*(maxamp>10))[0]
-                        j = j[np.random.random_integers(size=(1,1,len(j)))]
-                        W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength-1)+1:j*(spklength-1)]*.98
-                        p[i] = p[j]/2
-                        p[j] =p[j]/2
-                        print "Waveformsupdate: %d <- %d" % (i,j)
+                        j = np.where((p>=np.median(p))*
+                                     (p > splitp*4)*(maxamp>10))[0]
+                        j = j[np.random.random_integers(0,len(j)-1, 
+                                                        size=(1, 1))]
+                        W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength - 1) +
+                                                                       1:(j + 1)*(spklength - 1)]*.98
+                        p[i] = p[j] / 2
+                        p[j] =p[j] / 2
+                        print "\t\tWaveformsupdate: %d <- %d" % (i, j)
                         sys.stdout.flush()
                         break
                     except:
-                        print "Clustersplitting failed"
+                        print "\t\tClustersplitting failed"
                         sys.stdout.flush()
 
         if debug:
             for j in xrange(len(spkform)):
-                plt.subplot(len(spkform),1,j+1)
+                plt.subplot(len(spkform), 1,j+1)
                 plt.gca().clear()
-                plt.plot(x.T,spkform[j].T)
+                plt.plot(x.T, spkform[j].T)
             plt.draw()    
 
     #del g,fit 
     del g 
     for j in xrange(len(spkform)):
-        spkform[j,:,:-1] = np.concatenate((W[:,1][:,None], W[:,j*(spklength-1)+1:(j+1)*(spklength-1)]),axis=1)
+        spkform[j,:,:-1] = np.concatenate((W[:,1][:,None], 
+                                           W[:,j*(spklength-1)+1:(j+1)*(spklength-1)])
+                                          ,axis=1)
     
     return data,spkform,p,cinv
 
@@ -845,7 +859,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
     forms = np.zeros(spkform_old.shape)
     ind = np.zeros((spks,))
     for i in xrange(spks):
-        t = np.trace(np.dot(np.dot(cinv,spkform_old[i]),spkform_old[i].T))
+        t = np.trace(np.dot(np.dot(np.atleast_2d(cinv),spkform_old[i]),spkform_old[i].T))
         if t < 3*spklen:
             forms[k] = spkform_old[i]
             p[k] = pp[i]
@@ -885,7 +899,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
             difference_old = np.inf
             for j in xrange(spklennew):
                 shifted_template = np.concatenate((splineform[:,j:,i],splineform[:,:j,i]),axis=1)
-                difference = np.trace(np.dot(splineform[:,:,0]-shifted_template,np.dot(cinv,splineform[:,:,0]-shifted_template).T))
+                difference = np.trace(np.dot(splineform[:,:,0]-shifted_template,np.dot(np.atleast_2d(cinv),splineform[:,:,0]-shifted_template).T))
                 if difference < difference_old:
                     difference_old = difference
                     shift[i] = j
@@ -897,7 +911,8 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
 
         while docombine:
             r+=1
-            splineform[:,:,index[0]] = (p[index[0]]*splineform[:,:,index[0]] + p[index[1]]*splineform[:,:,index[1]])/p[index].sum()
+            splineform[:,:,index[0]] = (p[index[0]]*splineform[:,:,index[0]] +
+                                        p[index[1]]*splineform[:,:,index[1]])/p[index].sum()
             p[index[0]] = p[index].sum()
             s = splineform.shape
             s = s[:-1] + (s[-1]-1,)
@@ -907,7 +922,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
             splineform_test_new = np.zeros(s)
             p_new = np.zeros((spks-1,))
             shift_new = np.zeros((spks-1,))
-            k =-1 
+            k =- 1 
             for count in xrange(spks):
                 if count != index[1]:
                     k+=1
@@ -923,7 +938,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
             spks-=1
             index,docombine,value = combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha)
 
-        print "Could not combine any more: value %.3f" %(value,)
+        print "Could not combine any more: value %.3f" % (value,)
         sys.stdout.flush()
         
         #shift back
@@ -978,7 +993,7 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
         docombine = 0
         value = 0
         return index,docombine,value
-    
+    _cinv = np.atleast_2d(cinv) 
     splineform = splineform[:,splineform_test[0,:,:].sum(-1)==spks,:]
     h = np.zeros((spks,spks))
     pvalt = np.zeros((spks,spks))
@@ -989,7 +1004,7 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
             diffnorm = np.zeros((splineform.shape[0],splineform.shape[1]/10+1))
             for k in xrange(splineform.shape[0]):
                 diffnorm[k,:] = interpolate.spline(np.arange(splineform.shape[1]),splineform[k,:,i]-splineform[k,:,j],np.arange(0,splineform.shape[1]+1,10))
-            teststat[i,j] = np.trace(np.dot(diffnorm.T,np.dot(cinv,diffnorm)))/(1.0/(min(winlen*p[i],maxp))+1.0/min(winlen*p[j],maxp))
+            teststat[i,j] = np.trace(np.dot(diffnorm.T,np.dot(_cinv,diffnorm)))/(1.0/(min(winlen*p[i],maxp))+1.0/min(winlen*p[j],maxp))
             if teststat[i,j] < diffnorm.size:
                 pvalt[i,j] = 1
             else:
@@ -1094,7 +1109,7 @@ if __name__ == '__main__':
             channels = []
             for c in chs:
                 if '-' in c:
-                    start,_,stop = sss.partition('-')
+                    start,_,stop = c.partition('-')
                     channels.extend(range(int(start),int(stop)+1))
                 else:
                     channels.append(int(c))
@@ -1165,7 +1180,8 @@ if __name__ == '__main__':
             if cinv == None: 
                 if os.path.isfile('%s_highpass.bin' %(base,)):
                     nchs = descriptor['channel_status'].sum()
-                    alldata = np.memmap('%s_highpass.bin' %( base,),dtype=np.int16,shape=(nchs,data.size/nchs))
+                    alldata,sr = extraction.readDataFile('%s_highpass.bin' %(
+                        base,))
                     alldata = alldata[channels,:]
                 else: 
                     if '--basePath' in opts: 
