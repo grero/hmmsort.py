@@ -14,37 +14,125 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-function mlseq = hmm_decode(filename, patchlength, p,varargin)
+function [mlseq,ll] = hmm_decode(varargin)
 
-Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile','','hdf5Path','');
-Args.flags = {'save','hdf5'};
+Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile',[],'hdf5Path',[],'spikeForms',[],'data',[],'reorder',[],'maxSize',[],'maxCells',30,'DataFile','','samplingRate',[],'fileName',[],'patchLength',[],'prob',[],'cinv',[],'outlierThreshold',4,'parseOutput',0);
+Args.flags = {'save','hdf5','parseOutput'};
 [Args,varargin] = getoptargs(varargin,Args);
 addpath helper_functions
 % specify file to sort, should consist of:
 
 % data      DxT array, data to sort
-% spkform   N-dimensional cell of DxK spike templates
-% cinv      inverse of the covariance of the model
+% spikeForms   N-dimensional cell of DxK spike templates
+%samplingRate  the sampling rate of the data
+% cinv      inverse of the covariance of the model. Will be computed if not
+%           given
+
 try
-	if ~Args.hdf5
-		load([filename '.mat'])
-	else
-		if isempty(Args.hdf5Path)
-			spikeForms = hdf5read([filename '.hdf5'],'/spikeForms');
-			cinv = hdf5read([filename '.hdf5'],'/cinv');
+	%check if we are not given a filename, but Args.Group is given
+	nargin
+	if isempty(Args.fileName) && ~isempty(Args.Group) && ~isempty(Args.SourceFile)
+		%try to locate the waveforms.bin file as well as the cut-file and get the spikeforms from those	
+		%get the session name by parsing the source file
+		if ischar(Args.Group)
+			Args.Group = str2num(Args.Group);
+		end
+		[pth,f,e] = fileparts(Args.SourceFile);
+	    idx = strfind(f,'_highpass');
+		sessionName = f(1:idx-1);
+		%construct waveforms file and cut file
+		waveformsFile = sprintf('%s/../%sg%.4dwaveforms.bin',pth,sessionName,Args.Group);
+		cutFile = sprintf('%s/../%sg%.4dwaveforms.cut',pth,sessionName,Args.Group);
+		if exist(waveformsFile) && exist(cutFile)
+			%get the waveforms and the cluster ids
+			[t,wv] = nptLoadingEngine(waveformsFile);
+			cids = load(cutFile);
+			uc = unique(cids);
+			uc = uc(uc>0);
+			spkforms = {}
+			spikeForms = zeros(length(uc),size(wv,2),size(wv,3)+1);
+			for c=1:length(uc)
+				spkform{uc(c)} = [0;squeeze(mean(wv(cids==uc(c),:,:),1))]';
+				spikeForms(c,:,2:end) = mean(wv(cids==uc(c),:,:),1);
+			end
+		end
+	%check if we are given spikeForms
+	elseif isempty(Args.spikeForms) 
+        if ~isempty(Args.reorder)
+            if ischar(Args.reorder)
+                reorder = load(Args.reorder);
+            else
+                reorder = Args.reorder;
+            end
+        end
+		if ~Args.hdf5
+			if isempty(Args.cinv)
+				load(Args.fileName,'spkform','cinv')
+			else
+				load(Args.fileName,'spkform')
+				cinv = Args.cinv;
+			end;
 		else
-			spikeForms = hdf5read([filename '.hdf5'], [Args.hdf5Path '/spikeForms']);
-			cinv = hdf5read([filename '.hdf5'],[Args.hdf5Path '/cinv']);
+			if isempty(Args.hdf5Path)
+				try
+					spikeForms = hdf5read(Args.fileName,'/spikeForms');
+				catch e
+					spikeForms = hdf5read(Args.fileName,'/spkform');
+					spikeForms = cell2array(spikeForms);
+				end
+            	try    
+					cinv = hdf5read(Args.fileName,'/cinv');
+				catch
+				end
+			else
+				try
+					spikeForms = hdf5read(Args.fileName, [Args.hdf5Path '/spikeForms']);
+				catch e
+					spikeForms = hdf5read(Args.fileName, [Args.hdf5Path '/spforms']);
+					spikeForms = cell2array(spikeForms);
+				end
+				try
+					cinv = hdf5read(Args.fileName,[Args.hdf5Path '/cinv']);
+					Args.Channels = double(hdf5read(Args.fileName,[Args.hdf5Path '/channels']))+1
+				catch
+					%do nothing
+				end
+			end
+			%need to permute; if hdf5, spikeforms are stored in row order,
+			%i.e. numSpikeForms X nchannels X nstates;
+			
+			spikeForms = permute(spikeForms,[3,2,1]);
+            %%debub
+			if ischar(Args.maxCells)
+				Args.maxCells = str2num(Args.maxCells);
+			end
+			if Args.maxCells > 0
+				if size(spikeForms,1)>Args.maxCells
+					disp(['A maximum of 30 cells can be sorted together.' num2str(size(spikeForms,1)-Args.maxCells) ' cells were discarded'] );
+					spikeForms = spikeForms(1:Args.maxCells,:,:);
+				end
+			end
+            %%%
+			size(spikeForms)
+            Z = zeros(size(spikeForms,1),size(spikeForms,2),size(spikeForms,3)+1);
+            Z(:,:,2:end) = spikeForms;
+            
+			for i=1:size(spikeForms,1)
+				%spkform{i} = squeeze(spikeForms(i,:,:));
+				%TODO: this might not work for more than one channel. Apparently, squeeze remove all singleton dimensions, which means that the resulting dimension when there is only one channel reverts back to matlab's default one dimensional vector, which is a column vector
+                spkform{i} = squeeze(Z(i,:,:));
+				if size(spkform{i},1) > size(spkform{i},2)
+					spkform{i} = spkform{i}';
+				end
+			end
+			%p = hdf5read([filename '.hdf5'],'/p');
+			%cinv = hdf5read([filename '.hdf5'],'/cinv');
 		end
-		%need to permute
-		spikeForms = permute(spikeForms,[3,2,1]);
-		for i=1:size(spikeForms,1)
-			spkform{i} = squeeze(spikeForms(i,:,:));
-		end
-		%p = hdf5read([filename '.hdf5'],'/p');
-		%cinv = hdf5read([filename '.hdf5'],'/cinv');
 	end
-	if ~isempty(Args.SourceFile)
+	if ~exist('spkform') && ~isempty(Args.spikeForms)
+		spkform = Args.spikeForms;
+	end
+	if ~isempty(Args.SourceFile) && isempty(Args.data)
 		header = ReadUEIFile('Filename',Args.SourceFile,'Header');
 		if header.headerSize == 73
 			fid = fopen(Args.SourceFile,'r');
@@ -52,28 +140,43 @@ try
 			fclose(fid);
 		end
 		M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
-		if header.numChannels > size(spkform{1},1) 
-			if ischar(Args.Channels)
-				Args.Channels = str2num(Args.Channels);
-			end
-			if length(Args.Channels)~=0
+		%data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+        if ischar(Args.Channels)
+            Args.Channels = str2num(Args.Channels);
+        end
+		channels = Args.Channels;
+        if ~isempty(Args.reorder)
 				data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
-				data = data(Args.Channels,:);
-			elseif ~isempty(Args.Group)
-				%need to load the descriptor
-				if ischar(Args.Group)
-					Args.Group = str2num(Args.Group);
-				end
-				g = Args.Group;
-				idx = strfind(Args.SourceFile,'highpass');
-				idx = idx(end);
-				if isempty(Args.DescriptorFile)
+                if max(reorder)>size(data,1)
+                    tdata = zeros(max(reorder),size(data,2));
+                    tdata(reorder,:) = data;
+                    data = tdata;
+                    clear tdata;
+                else
+                    data = data(reorder,:);
+                end
+        end
+        if ~isempty(Args.Channels)
+			channels = Args.Channels;
+        elseif ~isempty(Args.Group)
+            %need to load the descriptor
+            if ischar(Args.Group)
+                Args.Group = str2num(Args.Group);
+            end
+            g = Args.Group;
+            idx = strfind(Args.SourceFile,'highpass');
+            idx = idx(end);
+            if isempty(Args.DescriptorFile)
+				try
 					descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
-				else
-					descriptor = ReadDescriptor(Args.DescriptorFile);
+				catch
 				end
+            else
+                descriptor = ReadDescriptor(Args.DescriptorFile);
+            end
 
-				%channels = find(descriptor.group==g);
+            %channels = find(descriptor.group==g);
+			if exist('descriptor')
 				channels = [];
 				j = 0;
 				for i=1:descriptor.number_of_channels
@@ -84,50 +187,113 @@ try
 						end
 					end
 				end
-				disp(['Sorting waveforms for group ' num2str(g) ' spanning channels ' num2str(channels) ' ...']);
-				if length(channels)==0
-					disp('Channel mismatch. Could not proceed');
-					return
-				end
-				data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
-				data = data(channels,:);
-				Args.Channels = channels;
 			else
-				disp('Channel mismatch. Could not proceed')
-				return
+				%if no descriptor could be found, simply use the group number as the channel number
+				channels = Args.Group;
 			end
+			%get the data
+			if ~exist('data')
+				data = zeros(size(M.Data,1)/header.numChannels,length(channels));
+				for c=1:length(channels)
+					data(:,c) = M.Data(channels(c):header.numChannels:end);
+				end
+			elseif size(data,1) < size(data,2)
+				data = data';
+				if size(data,2) > 1
+					data = data(:,channels);
+				end
+			end
+            disp(['Sorting waveforms for group ' num2str(g) ' spanning channels ' num2str(channels) ' ...']);
+            if length(channels)==0
+                disp('Channel mismatch. Could not proceed');
+                return
+            end
+            %data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+            %data = data(channels,:);
+            %Args.Channels = channels;
+        %else
+        %    disp('Channel mismatch. Could not proceed')
+        %    return
+        end
+		samplingRate = header.samplingRate;
+    else
+        %data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+		data = Args.data;
+        %check that data has the right dimension
+        if size(data,1) < size(data,2)
+            data = data';
+        end
+		samplingRate = Args.samplingRate;
+    end
+    if ~exist('channels')
+        channels = 1:size(data,2);
+    end
+	if ~exist('cinv')
+		if ~isempty(Args.cinv)
+			cinv = Args.cinv;
 		else
-			data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
+			C = cov(data);
+			S = sqrt(diag(C));
+			if size(data,2)==1
+				%remove outliers
+				thresh = Args.outlierThreshold;
+				cinv = pinv(cov(data(abs(data)<thresh*S)));
+			else
+				warning('Outlier detection not implemented for more than 1 channel');
+				cinv = pinv(cov(data));
+			end
 		end
 	end
-
+	if size(data,1) ~= length(channels)
+		data = data';
+	end
+    if ~isempty(Args.maxSize)
+        if ischar(Args.maxSize)
+            Args.maxSize = str2num(Args.maxSize)
+        end
+        data = data(:,1:Args.maxSize);
+    end
 	% sort the data
 	% length of the pieces to be sorted at once
-	if nargin < 2
+	if isempty(Args.patchLength) 
 		patchlength = 20000;
+	elseif ischar(Args.patchLength)
+			patchlength = str2num(Args.patchLength);
 	else
-		if ischar(patchlength)
-			patchlength = str2num(patchlength);
-		end
+		patchlength = Args.patchLength;
 	end
 	patchlength = min(patchlength,size(data,2));
 	% spiking probability
-	if nargin <3
-		p = 1e-10;
+	if isempty(Args.prob)
+		%use the heuristic from the paper
+		%p = 2^3KD/2
+		p = 2.^(-3*size(spkform{1},2)*size(spkform{1},1)/2);
+		%p = 1e-10;
+	elseif ischar(Args.prob)
+		p = str2num(Args.prob);
 	else
-		if ischar(p)
-			p = str2num(p);
-		end
+		p = Args.prob;
 	end
+	p
 
 
 	% mlseq is an NxT array with the states of all N templates at each time
-	mlseq = cutsort(data, spkform, cinv, patchlength, p);
+	[mlseq,ll] = cutsort(data, spkform, cinv, patchlength, p);
 	%save sequence to sorting file; if a source file was used, save to a file consistent with that name
 	if Args.save
 		if ~isempty(Args.SourceFile)
-			parts = strsplit(Args.SourceFile,'_');
+			if Args.parseOutput
+				parseHMMOutput(mlseq,spikeForms(:,:,2:end),sessionName,Args.Group,data,samplingRate);
+			end
+			%parts = strsplit(Args.SourceFile,'_');
+			%note strfind finds all the matches
 			idx = strfind(Args.SourceFile,'highpass');
+			if length(idx)>1
+				offset = idx(1)+length('highpass')+1;
+			else
+				offset = 1;
+			end
+			idx = idx(end);
 			if isempty(Args.Group) && ~isempty(Args.Channels)
 				if isempty(Args.DescriptorFile)
 					descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
@@ -138,16 +304,26 @@ try
 
 			end
 			nparts = strsplit(Args.SourceFile,'.');
-			fname = sprintf('hmmsort/%sg%.4d.%.4d.mat',Args.SourceFile(1:idx-2),Args.Group,str2num(nparts{end}));
+            if ~isempty(Args.Group)
+                fname = sprintf('%sg%.4d.%.4d.mat',Args.SourceFile(offset:idx-1),Args.Group,str2num(nparts{end}));
+			elseif ~isempty(Args.hdf5Path)
+                fname = sprintf('%s%s.%.4d.mat',Args.SourceFile(offset:idx-1),strrep(Args.hdf5Path,'/',''),str2num(nparts{end}));
+            else
+                fname = sprintf('%s.%.4d.mat',Args.SourceFile(offset:idx-1),str2num(nparts{end}));
+            end
 			disp(['Saving data to file ' fname '...']);
 			%if exist(fname)
-			save(fname,'mlseq','spikeForms');
-			%else
-			%	save(fname,'mlseq','spikeForms');
-			%end
+			if ~exist('spikeForms')
+				spikeForms = cell2array(spkform);
+			end
+			if ndims(spikeForms) == 2
+				spikeForms = shiftdim(spikeForms,-1);
+				spikeForms = permute(spikeForms,[2,1,3]);
+			end
+			save(fname,'mlseq','spikeForms','ll');
 		else
-			save([filename '.mat'],'mlseq','-append');
-			fname = [filename '.mat'];
+			save([Args.fileName '.mat'],'mlseq','ll','-append');
+			fname = [Args.fileName '.mat'];
 		end
 		if length(Args.Channels)>0
 			Channels = Args.Channels;
@@ -157,11 +333,16 @@ try
 	catch err
 		disp('An error occurred');
 		err
-		exit(100);
+        err.stack.file
+        err.stack.name
+        err.stack.line
+        if isdeployed
+            exit(100);
+        end
 	end
 end
 
-function mlseq = cutsort(data, spkform, cinv, patchlength, p)
+function [mlseq,LL] = cutsort(data, spkform, cinv, patchlength, p)
 
 % data          DxT array, data to sort
 % spkform       N-dimensional cell of DxK spike templates
@@ -187,10 +368,16 @@ disp(['sorting window ' num2str(window(1)) ':' num2str(window(2))])
     joshviterbi(data(:,window(1):window(2)),spkform,overlaps,cinv,p);
 
 test = 1;
+LL = ll;
 while test
     % specify the window to sort next
     % find last entry, where all rings where non active
-    window(1) = max(find(seq(window(1):window(2))==0))+window(1)-1;
+	ly = max(find(seq(window(1):window(2))==0));
+	%if we happend to find the same window, increment by 1
+	if ly ==1
+		ly  = ly+1;
+	end
+    window(1) = ly+window(1)-1;
     window(2)=window(1)+patchlength;
 
     if window(2)>size(data,2)
@@ -202,6 +389,8 @@ while test
 
     [ll,seq(window(1):window(2))] = ...
         joshviterbi(data(:,window(1):window(2)),spkform,overlaps,cinv,p);
+	%add the log-likelihoods
+	LL = LL + ll;
 end
 
 % separate the complex state combination into the individual states
@@ -261,7 +450,8 @@ active_states = cell(1,length(spkform));
 
 for i=1:length(spkform)
     % how many states does template i have?
-    numstates(i) = length(spkform{i});
+    %numstates(i) = length(spkform{i});
+    numstates(i) = size(spkform{i},2);
     % create the transition matrix
     trmatrix_cell{i} = neurontrmatrix(0.5,numstates(i));
     % pass vector with active states
