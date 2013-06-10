@@ -17,6 +17,7 @@ from PyNpt import fileReaders as fr
 import scipy.interpolate as interpolate
 from PyNpt import extraction
 import time
+import blosc
 
 
 #use PDF backend if we are running a script
@@ -142,7 +143,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     sampling_rate = min(30000.0,sampling_rate)
     
     fid.close()
-
+    print "Reading data from file %s" %(dataFile, )
     data,sr = extraction.readDataFile(dataFile)
     head,tail = os.path.split(dataFile)
     descriptorFile = '%s_descriptor.txt' % (tail[:tail.rfind('_')],)
@@ -682,12 +683,15 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     nchunks = int(np.ceil(1.0*data.shape[0]/chunksize))
     chunks = np.append(np.arange(0,data.shape[0],chunksize),[data.shape[0]])
     chunksizes = np.diff(chunks).astype(np.int)
+    packed_chunksizes = np.zeros((nchunks,),dtype=np.int)
     nchunks = len(chunksizes)
+    dt = 0
     for bw in xrange(iterations):
         print "Iteration %d of %d" % (bw, 
                                      iterations)
         sys.stdout.flush()
-        fid = tempfile.TemporaryFile(dir=tempPath)
+        files = ['']*nchunks
+        #fid = tempfile.TemporaryFile(dir=tempPath)
         p = p_reset
         g = np.zeros((N*(spklength-1)+1,chunksize))
         b = np.zeros((g.shape[0],))
@@ -700,101 +704,127 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         print "\tRunning forward algorithm..."
         sys.stdout.flush()
         #do this in chunks
-        for i in xrange(nchunks):
-            print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
-            for t in xrange(1,chunksizes[i]):
-                a = chunks[i]+t
-                y = W-data[a,:][:,None]
-                f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))+tiny
-                g[:, t] = g[q, t - 1]
-                g[0, t] = g[1:2 + (N - 1)*(spklength - 1):(spklength - 1), t].sum() + g[0, t] - g[0, t - 1]*p.sum()
-                g[1:2 + (N - 1) * (spklength - 1):(spklength - 1), t] = g[0, t - 1] * p
-                g[:, t] = g[:,t]*f[:] + tiny
-                g[:, t] = g[:, t] / (g[:, t].sum()+tiny)
-            #store to file and reset for the next chunk
-            g = g[:, :chunksizes[i]]
-            kk = 0
-            while kk < 100:
-                #try saving the file
-                try:
-                    g.tofile(fid)
-                except ValueError:
-                    """
-                    for some reason, sometimes we get a value error here. If that
-                    happens, just report the exception and let sge know an error
-                    occured
-                    """
-                    kk += 1
-                    time.sleep(10)
-                else:
-                    #if no exception occurred, we mangaed to save the file, so
-                    #break out of the loop
-                    break
-                    #traceback.print_exc(file=sys.stdout)
-                    #if __name__ == '__main__':
-                        #only exit if we are running this as a script
-                   #     sys.exit(99)
-            if kk == 100:
-                #if we reach here it means that we could not save the file
-                if __name__ == '__main__':
-                    print """Could not save temporary file, most likely because of
-                    lack of disk space"""
-                    sys.exit(99)
-                else:
-                    #raise an IO error
-                    raise IOError('Could not save temporary file')
-            g[:, 0] = g[:, -1]
+        try:
+            for i in xrange(nchunks):
+                print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
+                #create on file per chunk; don't delete since we'll need it when we
+                #run the backward sweep
+                fid = tempfile.NamedTemporaryFile(dir=tempPath,delete=False)
+                files[i] = fid.name
+                t1 = time.time()
+                for t in xrange(1,chunksizes[i]):
+                    a = chunks[i]+t
+                    y = W-data[a,:][:,None]
+                    f = np.exp(-0.5*(y*np.dot(c,y)).sum(0))+tiny
+                    g[:, t] = g[q, t - 1]
+                    g[0, t] = g[1:2 + (N - 1)*(spklength - 1):(spklength - 1), t].sum() + g[0, t] - g[0, t - 1]*p.sum()
+                    g[1:2 + (N - 1) * (spklength - 1):(spklength - 1), t] = g[0, t - 1] * p
+                    g[:, t] = g[:,t]*f[:] + tiny
+                    g[:, t] = g[:, t] / (g[:, t].sum()+tiny)
+                t2 = time.time()
+                #compute mean duration iteratively
+                dt = (dt*i+(t2-t1))/(i+1)
+                print "\t\t\tThat took %.2f seconds. ETTG: %.2f" % (t2-t1,
+                (nchunks-(i+1))*dt)
+                #store to file and reset for the next chunk
+                g = g[:, :chunksizes[i]]
+                #use blosc to compress the chunk
+                gp = blosc.pack_array(g)
+                packed_chunksizes[i] = len(gp)
+                kk = 0
+                while kk < 100:
+                    #try saving the file
+                    try:
+                        #g.tofile(fid)
+                        fid.write(gp)
+                        fid.flush()
+                    except ValueError:
+                        """
+                        for some reason, sometimes we get a value error here. If that
+                        happens, just report the exception and let sge know an error
+                        occured
+                        """
+                        kk += 1
+                        time.sleep(10)
+                    else:
+                        #if no exception occurred, we mangaed to save the file, so
+                        #break out of the loop
+                        break
+                        #traceback.print_exc(file=sys.stdout)
+                        #if __name__ == '__main__':
+                            #only exit if we are running this as a script
+                       #     sys.exit(99)
+                fid.close()
+                if kk == 100:
+                    #if we reach here it means that we could not save the file
+                    if __name__ == '__main__':
+                        print """Could not save temporary file, most likely because of
+                        lack of disk space"""
+                        sys.exit(99)
+                    else:
+                        #raise an IO error
+                        raise IOError('Could not save temporary file')
+                g[:, 0] = g[:, -1]
 
-        #backward
-        print "\tRunning backward algorithm..."
-        sys.stdout.flush()
-        G = np.zeros((g.shape[0], )) 
-        for i in xrange(nchunks - 1, -1, -1):
-            print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks) 
-            a = chunks[i]*(N*(spklength - 1) + 1)
-            fid.seek(a*g[0, 0].nbytes, 0)
-            g = np.fromfile(fid, dtype=np.float,
-                            count=(N*(spklength - 1) + 1)*chunksizes[i])
-            g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
-            for t in xrange(chunksizes[i] - 2, -1, -1):
-                a = chunks[i] + t + 1
-                y = W - data[a, :][: ,None]
-                f = np.exp(-0.5*(y*np.dot(c, y)).sum(0)) + tiny
-                b = b*f[:] + tiny
-                b[q] = b
-                b[0] = ((1 - p.sum())*b[-1] +
-                        np.dot(p,b[:(N-1)*(spklength - 1) + 1:(spklength - 1)].T))
-                b[(spklength - 1):1 + (N - 1)*(spklength - 1):(spklength - 1)] = b[-1]
-                b = b / (b.sum() + tiny)
-                g[:,t] = g[:,t] * b + tiny
-            g = g / (g.sum(0) + tiny)
-            G += g.sum(1)
-            #rewind file
-            fid.seek(-(N*(spklength - 1) + 1)*chunksizes[i]*g[0, 0].nbytes, 1)
-            g.tofile(fid)
-        
-        #TODO: This stop could be quite memory intensive
-        W = np.zeros(W.shape)
-        fid.seek(0)
-        for i in xrange(nchunks):
-            g = np.fromfile(fid,dtype=np.float,
-                            count=(N*(spklength-1)+1)*
-                            chunksizes[i]).reshape(N*(spklength-1)+1, 
-                            chunksizes[i])
-            W += np.dot(data[chunks[i]:chunks[i+1], :].T, g.T)
-        W = W / G[None,:]
-        W[:,0] = 0
-        p = np.zeros((N, ))
-        fid.seek(0)
-        D = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=data.shape,mode='w+')
-        for i in xrange(nchunks):
-            g = np.fromfile(fid, dtype=np.float,
-                            count=(N*(spklength - 1) + 1)*chunksizes[i])
-            g = g.reshape(N*(spklength-1) + 1, chunksizes[i])
-            p+= g[1::(spklength - 1),:].sum(1)
+            #backward
+            print "\tRunning backward algorithm..."
+            sys.stdout.flush()
+            G = np.zeros((g.shape[0], )) 
+            for i in xrange(nchunks - 1, -1, -1):
+                print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks) 
+                #reopen the tempfile corresponding to this chunk
+                fid = open(files[i],'a+')
+                a = chunks[i]*(N*(spklength - 1) + 1)
+                #seek to the required position in the file
+                #read the raw bytes and decompress
+                g = blosc.unpack_array(fid.read(packed_chunksizes[i]))
+                g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
+                for t in xrange(chunksizes[i] - 2, -1, -1):
+                    a = chunks[i] + t + 1
+                    y = W - data[a, :][: ,None]
+                    f = np.exp(-0.5*(y*np.dot(c, y)).sum(0)) + tiny
+                    b = b*f[:] + tiny
+                    b[q] = b
+                    b[0] = ((1 - p.sum())*b[-1] +
+                            np.dot(p,b[:(N-1)*(spklength - 1) + 1:(spklength - 1)].T))
+                    b[(spklength - 1):1 + (N - 1)*(spklength - 1):(spklength - 1)] = b[-1]
+                    b = b / (b.sum() + tiny)
+                    g[:,t] = g[:,t] * b + tiny
+                g = g / (g.sum(0) + tiny)
+                G += g.sum(1)
+                gp = blosc.pack_array(g)
+                #update the block size
+                packed_chunksizes[i] = len(gp)
+                #rewind the file
+                fid.seek(0)
+                fid.write(gp)
+                fid.close()
+            
+            #TODO: This stop could be quite memory intensive
+            W = np.zeros(W.shape)
+            for i in xrange(nchunks):
+                fid = open(files[i],'r')
+                g = blosc.unpack_array(fid.read())
+                fid.close()
+                g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
+                W += np.dot(data[chunks[i]:chunks[i+1], :].T, g.T)
+            W = W / G[None,:]
+            W[:,0] = 0
+            p = np.zeros((N, ))
+            D = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=data.shape,mode='w+')
+            for i in xrange(nchunks):
+                fid = open(files[i],'r')
+                g = blosc.unpack_array(fid.read())
+                fid.close()
+                g = g.reshape(N*(spklength-1) + 1, chunksizes[i])
+                p+= g[1::(spklength - 1),:].sum(1)
 
-            D[chunks[i]:chunks[i+1], :] = (W[:, :, None]*g[None, :, :]).sum(1).T
-        fid.close() 
+                D[chunks[i]:chunks[i+1], :] = (W[:, :, None]*g[None, :, :]).sum(1).T
+            #we are done with the files, so remove them
+        finally:
+            for f in files:
+                os.unlink(f)
+
         p=p / winlength
         if data.shape[1] > 1:
             cinv = np.linalg.pinv(np.cov((data-D).T))
