@@ -19,7 +19,7 @@ from PyNpt import extraction
 import time
 import blosc
 
-from . import utility
+from hmmsort import utility
 
 #use PDF backend if we are running a script
 if __name__ == '__main__':
