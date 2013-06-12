@@ -1210,7 +1210,7 @@ if __name__ == '__main__':
         outFileName = opts.get('--outFile')
         group = int(opts.get('--group','1'))
         splitp = np.float(opts.get('--minFiringRate','0.5'))
-        chunkSize = min(np.float(opts.get('--chunkSize','50000')),1.0e6)
+        chunkSize = min(np.float(opts.get('--chunkSize','100000')),1.0e6)
         version = int(opts.get('--version','3'))
         debug = opts.has_key('--debug')
         redo = opts.has_key('--redo')
