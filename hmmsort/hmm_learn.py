@@ -146,6 +146,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     fid.close()
     print "Reading data from file %s" %(dataFile, )
     data,sr = extraction.readDataFile(dataFile)
+    sampling_rate = sr
     head,tail = os.path.split(dataFile)
     descriptorFile = '%s_descriptor.txt' % (tail[:tail.rfind('_')],)
     if not os.path.isfile(descriptorFile):
