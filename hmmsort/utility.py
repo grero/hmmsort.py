@@ -144,14 +144,12 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             plt.plot(x.T,spkform[j].T)
         plt.draw()
     N = len(spkform)
-    if cinv == None:
+    if cinv is None:
         if data.shape[1]>1:
-            c = np.linalg.pinv(np.cov(data.T))
+            cinv = np.linalg.pinv(np.cov(data.T))
         else:
             #single dimension
-            c = 1.0/data.var(0)
-    else:
-        c = cinv
+            cinv = 1.0/data.var(0)
     if p == None:
         p = 1.e-8*np.ones((N,))
     else:
