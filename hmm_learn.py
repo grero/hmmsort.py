@@ -773,11 +773,12 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             for i in xrange(nchunks - 1, -1, -1):
                 print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks) 
                 #reopen the tempfile corresponding to this chunk
-                fid = open(files[i],'a+')
+                fid = open(files[i],'r')
                 a = chunks[i]*(N*(spklength - 1) + 1)
                 #seek to the required position in the file
                 #read the raw bytes and decompress
                 g = blosc.unpack_array(fid.read(packed_chunksizes[i]))
+                fid.close()
                 g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
                 for t in xrange(chunksizes[i] - 2, -1, -1):
                     a = chunks[i] + t + 1
@@ -795,8 +796,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 gp = blosc.pack_array(g)
                 #update the block size
                 packed_chunksizes[i] = len(gp)
-                #rewind the file
-                fid.seek(0)
+                fid = open(files[i],'w')
                 fid.write(gp)
                 fid.close()
             
