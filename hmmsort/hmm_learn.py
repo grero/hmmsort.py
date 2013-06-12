@@ -271,6 +271,9 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         plt.figure(figsize=(6, 10))
     if samplingRate == None:
         samplingRate = 30000.0
+    if not 'states'in kwargs:
+        states = int(np.ceil(samplingRate/1000.))
+        kwargs['states'] = states
     if splitp == None:
         #set the minimum firing rate at 0.5 Hz
         splitp = 0.5/samplingRate
