@@ -227,7 +227,9 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             outf.close()
         else:
             outfile = False
-        spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,chunksize=chunksize,version=2,saveToFile=outfile,**kwargs)
+        spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,
+                                         chunksize=chunksize,version=version,
+                                         saveToFile=outfile,**kwargs)
     if spikeForms != None and 'second_learning' in spikeForms and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
         if save:
             #reopen to save the last result
