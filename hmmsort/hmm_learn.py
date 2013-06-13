@@ -233,13 +233,18 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     if spikeForms != None and 'second_learning' in spikeForms and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
         if save:
             #reopen to save the last result
-            outf.close()
+            try:
+                outf.close()
+            except ValueError:
+                #this probably means that the file was not opened
+                pass
             outf = h5py.File(outfile,'a')
             try:
                 outf['spikeForms'] = spikeForms['second_learning']['after_noise']['spikeForms']
                 outf['p'] = spikeForms['second_learning']['after_noise']['p']
                 outf['cinv'] = cinv
                 outf.flush()
+                outf.close()
             except:
                 pass
     else:
@@ -291,6 +296,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     if saveToFile:
         try:
             outFile = h5py.File(saveToFile,'a')
+            print "Saving to file %s" % (saveToFile,)
         except IOError:
             print "Could not open file %s..." % (saveToFile,)
             saveToFile = False
