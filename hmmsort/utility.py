@@ -343,19 +343,19 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             for i in xrange(len(spkform)):
                 if p[i] < splitp:
                     #remove template i and replace with template j
-                    try:
-                        j = np.where((p>=np.median(p))*
-                                     (p > splitp*4)*(maxamp>10))[0]
+                    j = np.where((p>=np.median(p))*
+                                 (p > splitp*4)*(maxamp>10))[0]
+                    if len(j)>0:
                         j = j[np.random.random_integers(0,len(j)-1, 
                                                         size=(1, 1))]
-                        W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength - 1) +
+                        W[i*(spklength-1)+1:(i+1)*(spklength-1)] = W[j*(spklength - 1) +
                                                                        1:(j + 1)*(spklength - 1)]*.98
                         p[i] = p[j] / 2
                         p[j] =p[j] / 2
                         print "\t\tWaveformsupdate: %d <- %d" % (i, j)
                         sys.stdout.flush()
                         break
-                    except:
+                    else:
                         print "\t\tClustersplitting failed"
                         sys.stdout.flush()
 
