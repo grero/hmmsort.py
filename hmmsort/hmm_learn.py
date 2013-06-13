@@ -301,23 +301,23 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 spkform = outFile['all']['spikeForms'][:]
                 p = outFile['all']['p'][:]
                 cinv = outFile['cinv'][:]
-                spikeForms = {'all': {'spikeForms': spikeForms,
-                                   'p': p}}
+                spikeForms['all']  = {'spikeForms': spkform,
+                                   'p': p}
             if 'after_combine' in outFile:
                 spkform = outFile['after_combine']['spikeForms'][:]
                 p = outFile['after_combine']['p'][:]
-                spikeForms = {'after_combine': {'spikeForms': spikeForms,
-                                   'p': p}}
+                spikeForms['after_combine']  = {'spikeForms': spkform,
+                                   'p': p}
             if 'after_sparse' in outFile: 
                 spkform = outFile['after_sparse']['spikeForms'][:]
                 p = outFile['after_sparse']['p'][:]
-                spikeForrms = {'after_sparse': {'spikeForms': spikeForms,
-                                   'p': p}}
+                spikeForms['after_sparse'] = {'spikeForms': spkform,
+                                   'p': p}
             if 'after_noise' in outFile:
                 spkform = outFile['after_noise']['spikeForms'][:]
                 p = outFile['after_noise']['p'][:]
-                spikeForrms = {'after_noise': {'spikeForms': spikeForms,
-                                   'p': p}}
+                spikeForms['after_noise']  = {'spikeForms': spkform,
+                                   'p': p}
     if not 'all' in spikeForms:  
         data,spkform,p,cinv = learnf(data,iterations=iterations,debug=debug,
                                      levels=data.shape[1],**kwargs)
