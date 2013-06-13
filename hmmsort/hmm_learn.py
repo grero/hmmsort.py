@@ -350,7 +350,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     else:
         spkform = spikeForms['after_combine']['spikeForms']
         p = spikeForms['after_combine']['p']
-        cinv = spikeForms['after_combine']['cinv']
     if not 'after_noise' in spikeForms:
         spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
         spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
@@ -366,7 +365,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     else:
         spkform = spikeForms['after_noise']['spikeForms']
         p = spikeForms['after_noise']['p']
-        cinv = spikeForms['after_noise']['cinv']
     if not 'after_sparse' in spikeForms:
         spkform,p = removeSparse(spkform,p,splitp)
         spikeForms['after_sparse'] = {'spikeForms': spkform,'p': p}
@@ -380,9 +378,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             print "No spikeforms remain after removing templates that fire too sparsely"
             return spikeForms,cinv
     else:
-        spkform = spikeForms['after_sparse'] ['spikeForms']
+        spkform = spikeForms['after_sparse']['spikeForms']
         p = spikeForms['after_sparse']['p']
-        cinv = spikeForms['after_sparse']['cinv']
 
     if debug:
         plt.gca().clear()
@@ -419,7 +416,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         else:
             spkform = spikeForms['second_learning']['spikeForms']
             p = spikeForms['second_learning']['p']
-            cinv = spikeForms['second_learning']['cinv']
 
         #remove sparse waveforms
         if len(spkform)>0:
