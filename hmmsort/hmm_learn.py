@@ -324,6 +324,23 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 p = outFile['after_noise']['p'][:]
                 spikeForms['after_noise']  = {'spikeForms': spkform,
                                    'p': p}
+            if 'second_learning' in outFile:
+                if 'spikeForms' in outFile['second_learning']:
+                    spkform = outFile['second_learning']['spikeForms'][:]
+                    p = outFile['second_learning']['p'][:]
+                    spikeForms['second_learning'] = {'spikeForms': spkform,
+                                                     'p': p}
+                    if 'after_sparse' in outFile['second_learning']:
+                        spkform = outFile['second_learning']['after_sparse']['spikeForms'][:]
+                        p = outFile['second_learning']['after_sparse']['p'][:]
+                        spikeForms['second_learning']['after_sparse'] = {'spikeForms': spkform,
+                                                     'p': p}
+                    if 'after_noise' in outFile['second_learning']:
+                        spkform = outFile['second_learning']['after_noise']['spikeForms'][:]
+                        p = outFile['second_learning']['after_noise']['p'][:]
+                        spikeForms['second_learning']['after_noise'] = {'spikeForms': spkform,
+                                                     'p': p}
+
     if not 'all' in spikeForms:  
         data,spkform,p,cinv = learnf(data,iterations=iterations,debug=debug,
                                      levels=data.shape[1],**kwargs)
@@ -412,6 +429,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                     outFile.create_group('second_learning')
                 outFile['second_learning']['spikeForms'] = spkform
                 outFile['second_learning']['p'] = p
+                outFile['cinv'] = cinv
                 outFile.flush()
         else:
             spkform = spikeForms['second_learning']['spikeForms']
@@ -431,7 +449,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             else:
                 spkform = spikeForms['second_learning']['after_sparse']['spikeForms']
                 p = spikeForms['second_learning']['after_sparse']['p']
-                cinv = spikeForms['second_learning']['after_sarpse']['cinv']
 
 
         if debug:
@@ -457,7 +474,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             else:
                 spkform = spikeForms['second_learning']['after_noise']['spikeForms']
                 p = spikeForms['second_learning']['after_noise']['p']
-                cinv = spikeForms['second_learning']['after_noise']['cinv']
 
             print "Included because of sigma: "
             s = ['%d ' %(i,) for i in idx]
