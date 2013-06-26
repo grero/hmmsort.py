@@ -423,13 +423,13 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         if not 'second_learning' in spikeForms:
             #learn some more
             data,spkform,p,cinv = learnf(data,spkform,iterations=2,cinv=cinv,p=p,**kwargs)
-            spikeForms['second_learning'] = {'a': {'spikeForms':spkform,'p':p}}
+            spikeForms['second_learning'] = {'spikeForms':spkform,'p':p}
             if saveToFile and len(p)>0:
                 if not 'second_learning' in outFile:
                     outFile.create_group('second_learning')
                 outFile['second_learning']['spikeForms'] = spkform
                 outFile['second_learning']['p'] = p
-                outFile['cinv'] = cinv
+                outFile['cinv'][:] = cinv
                 outFile.flush()
         else:
             spkform = spikeForms['second_learning']['spikeForms']
