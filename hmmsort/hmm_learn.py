@@ -474,6 +474,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             else:
                 spkform = spikeForms['second_learning']['after_noise']['spikeForms']
                 p = spikeForms['second_learning']['after_noise']['p']
+                idx = range(len(p))
 
             print "Included because of sigma: "
             s = ['%d ' %(i,) for i in idx]
