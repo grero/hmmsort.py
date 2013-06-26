@@ -1221,7 +1221,7 @@ if __name__ == '__main__':
                                                             'fileChunkSize=','redo',
                                                             'basePath=','channels=',
                                                             'reorder','iterations=',
-                                                            'tempPath=,
+                                                            'tempPath=',
                                                             'outputFile='])
 
         opts = dict(opts)
