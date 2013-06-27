@@ -1141,7 +1141,7 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
             pvalt[j,i] = pvalt[i,j]
             
 
-    teststat += teststat.T + np.eye(teststat.shape[0])*teststat.max(0).max()
+    teststat += teststat.T + np.eye(teststat.shape[0])*teststat.max(0).max()*10
 
     b = np.argmin(teststat,1)
     a = teststat[np.arange(len(b)),b]
