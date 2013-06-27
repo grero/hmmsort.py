@@ -973,10 +973,9 @@ def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4,alpha=0.05):
     S = interpolate.interp1d(xx,S,axis=-1)(np.arange(nstates))
     return S,p
 
-def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4):
+def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4, alpha=0.001):
 
     winlen = winlen/tolerance
-    alpha = 0.001
     maxp = 12.0
     spks,dim,spklen = spkform_old.shape
     j =-1 
