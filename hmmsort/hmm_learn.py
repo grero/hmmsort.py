@@ -276,7 +276,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     if samplingRate == None:
         samplingRate = 30000.0
     if not 'states'in kwargs:
-        states = int(np.ceil(samplingRate/1000.))
+        #set the number of states corresponding to 1.5 ms
+        states = int(np.ceil(1.5*samplingRate/1000.))
         kwargs['states'] = states
     if splitp == None:
         #set the minimum firing rate at 0.5 Hz
