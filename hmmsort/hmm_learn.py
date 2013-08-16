@@ -1239,6 +1239,7 @@ if __name__ == '__main__':
         reoder = opts.has_key('--reorder')
         iterations = int(opts.get('--iterations',6))
         tempPath = opts.get('--tempPath','/Volumes/Scratch')
+        initFile = opts.get('--initFile')
         states = opts.get('--states')
         if states is not None:
             states = int(states)
