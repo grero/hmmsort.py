@@ -275,7 +275,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         plt.figure(figsize=(6, 10))
     if samplingRate == None:
         samplingRate = 30000.0
-    if not 'states'in kwargs:
+    states = kwargs.get('states')
+    if states is None:
         #set the number of states corresponding to 1.5 ms
         states = int(np.ceil(1.5*samplingRate/1000.))
         kwargs['states'] = states
@@ -1222,7 +1223,8 @@ if __name__ == '__main__':
                                                             'basePath=','channels=',
                                                             'reorder','iterations=',
                                                             'tempPath=',
-                                                            'outputFile='])
+                                                            'outputFile=',
+                                                            'initFile=','states='])
 
         opts = dict(opts)
 
@@ -1237,6 +1239,9 @@ if __name__ == '__main__':
         reoder = opts.has_key('--reorder')
         iterations = int(opts.get('--iterations',6))
         tempPath = opts.get('--tempPath','/Volumes/Scratch')
+        states = opts.get('--states')
+        if states is not None:
+            states = int(states)
         if not os.path.isdir(tempPath):
             print """The Requested tempPath %s does not exist. Reverting to the
             system default""" % (tempPath,)
@@ -1427,7 +1432,7 @@ if __name__ == '__main__':
                                                          version=version, debug=debug,
                                                          nFileChunks=nchunks, fileChunkId=tid,
                                                          redo=redo,iterations=iterations,
-                                                        tempPath=tempPath)
+                                                        tempPath=tempPath,initFile=initFile,states=states)
             except IOError:
                 print "Could not read/write to file"
                 sys.exit(100)
