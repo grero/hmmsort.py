@@ -110,7 +110,11 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1.5e6,version=2,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False,**kwargs):
+def learnTemplatesFromFile(dataFile, group=None, channels=None, save=True, 
+                           outfile=None, chunksize=1.5e6, version=2, 
+                           nFileChunks=None, fileChunkId=None, 
+                           divideByGain=False, reorder=False, 
+                           initFile=None, **kwargs):
     """
     Learns templates from the file pointed to by dataFile. The data should be
     stored channel wise in int16 format, i.e. the resulting array should have
