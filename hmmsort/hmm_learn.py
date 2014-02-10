@@ -1336,12 +1336,6 @@ if __name__ == '__main__':
             spkforms = np.array(spkforms) 
             p = np.array(p)
             print "Found a total of %d spikeforms..." % (spkforms.shape[0],)
-#get descriptor information
-            #base = dataFileName[:dataFileName.rfind('_')]
-            #descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
-            #if not os.path.isfile(descriptorFile):
-#sometimes the descriptor is located one level up
-            #    descriptorFile = '../%s' % (descriptorFile,)
             descriptor = fr.readDescriptor(descriptorFile)
             channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
             #check for the presence of a session hdf5 file
