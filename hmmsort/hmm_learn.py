@@ -1279,7 +1279,7 @@ if __name__ == '__main__':
         debug = opts.has_key('--debug')
         redo = opts.has_key('--redo')
         reoder = opts.has_key('--reorder')
-        iterations = int(opts.get('--iterations',6))
+        iterations = int(opts.get('--iterations',3))
         tempPath = opts.get('--tempPath','/Volumes/Scratch')
         initFile = opts.get('--initFile')
         states = opts.get('--states')
