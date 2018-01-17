@@ -18,7 +18,7 @@ function [mlseq,ll] = hmm_decode(varargin)
 
 Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile',[],'hdf5Path',[],'spikeForms',[],'data',[],'reorder',[],'maxSize',[],'maxCells',30,'DataFile','','samplingRate',[],'fileName',[],'patchLength',[],'prob',[],'cinv',[],'outlierThreshold',4,'parseOutput',0);
 Args.flags = {'save','hdf5','parseOutput'};
-[Args,varargin] = getoptargs(varargin,Args);
+[Args,varargin] = getOptArgs(varargin,Args);
 addpath helper_functions
 % specify file to sort, should consist of:
 
