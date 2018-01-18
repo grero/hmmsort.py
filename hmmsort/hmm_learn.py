@@ -168,7 +168,6 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         fileChunkSize = np.ceil(1.0*cdata.shape[0]/nFileChunks)
     
         cdata = cdata[fileChunkId*fileChunkSize:(fileChunkId+1)*fileChunkSize, :]
-    noiseOnly = False
     if save:
         if outfile == None:
             name,ext = os.path.splitext(tail)
@@ -230,8 +229,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             outfile = False
         spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,
                                          chunksize=chunksize,version=version,
-                                         saveToFile=outfile,noiseOnly=noiseOnly,
-                                         **kwargs)
+                                         saveToFile=outfile,**kwargs)
     if spikeForms != None and 'second_learning' in spikeForms and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
         if save:
             #reopen to save the last result
@@ -259,8 +257,8 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
 
     return spikeForms,cinv
 
-def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=2,
-                   saveToFile=False,redo=False,iterations=6,noiseOnly=False,**kwargs):
+def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=3,
+                   saveToFile=False,redo=False,iterations=3,**kwargs):
     """ 
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -302,29 +300,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         except IOError:
             print "Could not open file %s..." % (saveToFile,)
             saveToFile = False
-    #check if we are only estimating noise
-    if noiseOnly:
-        #this only work if the file contains spikeforms
-        print "Re-estimating noise based on previously fitted templates.."
-        sys.stdout.flush()
-        if 'spikeForms' in outFile:
-            spkform = outFile['spikeForms'][:]
-            cinv_old = outFile['cinv'][:]
-            print cinv_old
-            _, _ ,_ ,cinv = learnf(data, spkform=spkform,
-                                iterations=1,
-                                debug=debug,
-                                levels=data.shape[1], **kwargs)
-            print cinv
-            dd = (cinv-cinv_old)/cinv_old
-            print "Re-estimated noise differs from original by %.1f " % (dd, )
-            outFile['cinv'][:] = cinv
-            outFile.flush()
-            return spkform, cinv
-        else:
-            print "No spikeforms found. Noise cannot be esimated"
-            return
-
     spikeForms = {}
     if saveToFile:
         if not redo:
