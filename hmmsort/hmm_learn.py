@@ -1,4 +1,4 @@
-#!/opt/cluster/usr/bin/python2.6
+#!/home/roger/anaconda/bin/python
 """@package hmm_learn_tetrode
 This package contains a set of functions to learn spike templates from highpass
 data
