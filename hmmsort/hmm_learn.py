@@ -1389,8 +1389,7 @@ if __name__ == '__main__':
                                                         tempPath=tempPath,initFile=initFile,states=states)
             except IOError:
                 print "Could not read/write to file"
-                #An IO error is usually temporary, so let's exit with state 99,
-                #which will cause SGE to re-queue the job
+                traceback.print_exc(file=sys.stdout)
                 sys.exit(99)
     except:
         print "An error occurred"
