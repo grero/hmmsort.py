@@ -133,13 +133,30 @@ try
 		spkform = Args.spikeForms;
 	end
 	if ~isempty(Args.SourceFile) && isempty(Args.data)
-		header = ReadUEIFile('Filename',Args.SourceFile,'Header');
-		if header.headerSize == 73
-			fid = fopen(Args.SourceFile,'r');
-			[header.numChannels,header.samplingRate,scan_order] = nptParseStreamerHeader(fid);
-			fclose(fid);
-		end
-		M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
+        fparts = split(Args.SourceFile,'.');
+        if fparts(end) == 'mat'
+            fdata = load(Args.SourceFile);
+            data = fdata.rh.data.analogData;
+            samplingRate = fdata.rh.data.analogInfo.SampleRate;
+        else
+
+            header = ReadUEIFile('Filename',Args.SourceFile,'Header');
+
+            if header.headerSize == 73
+                fid = fopen(Args.SourceFile,'r');
+                [header.numChannels,header.samplingRate,scan_order] = nptParseStreamerHeader(fid);
+                fclose(fid);
+            elseif header.headerSize == 75
+                fid = fopen(Args.SourceFile,'r');
+                fseek(fid,4,0);
+                header.numChannels = fread(fid, 1, 'uint16');
+                header.transpose = fread(fid, 1, 'uint8');
+                header.samplingRate = fread(fid, 1, 'uint32');
+                fclose(fid);
+            end
+            samplingRate = header.samplingRate;
+            M = memmapfile(Args.SourceFile,'format','int16','offset',header.headerSize);
+        end
 		%data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
         if ischar(Args.Channels)
             Args.Channels = str2num(Args.Channels);
@@ -215,7 +232,6 @@ try
         %    disp('Channel mismatch. Could not proceed')
         %    return
         end
-		samplingRate = header.samplingRate;
     else
         %data = 	double(reshape(M.data,[header.numChannels,numel(M.data)/header.numChannels]));
 		data = Args.data;
@@ -223,7 +239,6 @@ try
         if size(data,1) < size(data,2)
             data = data';
         end
-		samplingRate = Args.samplingRate;
     end
     if ~exist('channels')
         channels = 1:size(data,2);
