@@ -246,7 +246,12 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
 
     #make sure we close the file
     if save:
-        outf.close()
+        #this will fail some times; make sure the erorr doesn't propagate in
+       #that case
+        try:
+            outf.close()
+        except ValueError:
+            pass
 
 
     return spikeForms,cinv
