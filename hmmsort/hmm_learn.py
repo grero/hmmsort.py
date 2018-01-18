@@ -111,11 +111,7 @@ def forward(g,P,spklength,N,winlength,p):
     err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile, group=None, channels=None, save=True, 
-                           outfile=None, chunksize=1.5e6, version=2, 
-                           nFileChunks=None, fileChunkId=None, 
-                           divideByGain=False, reorder=False, 
-                           initFile=None, **kwargs):
+def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1000000,version=3,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False,**kwargs):
     """
     Learns templates from the file pointed to by dataFile. The data should be
     stored channel wise in int16 format, i.e. the resulting array should have
@@ -1275,7 +1271,7 @@ if __name__ == '__main__':
         outFileName = opts.get('--outFile')
         group = int(opts.get('--group','1'))
         splitp = np.float(opts.get('--minFiringRate','0.5'))
-        chunkSize = min(np.float(opts.get('--chunkSize','100000')),1.0e6)
+        chunkSize = min(opts.get('--chunkSize','100000'),1000000)
         version = int(opts.get('--version','3'))
         debug = opts.has_key('--debug')
         redo = opts.has_key('--redo')
