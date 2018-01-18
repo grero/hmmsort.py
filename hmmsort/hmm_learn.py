@@ -28,6 +28,8 @@ np.seterr(all='warn')
 np.seterr(divide='raise')
 if os.path.isdir('/Volumes/Chimera/tmp'):
     tempfile.tempdir = '/Volumes/Chimera/tmp'
+elif os.path.isdir('/Volumes/DataX/tmp'):
+    tempfile.tempdir = '/Volumes/DataX/tmp'
 
 def gatherSpikeFormsFromGroup(group=1,sessionName=None,baseDir='hmmsort',globPattern=None):
     if globPattern == None:
