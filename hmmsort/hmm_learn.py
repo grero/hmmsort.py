@@ -13,9 +13,10 @@ import os
 import h5py
 import glob
 import traceback
-from PyNpt import fileReaders as fr
+from hmmsort import fileReaders as fr
 import scipy.interpolate as interpolate
-from PyNpt import extraction
+import scipy.io as mio
+from hmmsort import extraction
 import time
 import blosc
 import shutil
