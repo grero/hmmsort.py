@@ -22,14 +22,6 @@ import shutil
 
 from hmmsort import utility
 
-#use PDF backend if we are running a script
-if __name__ == '__main__':
-    import matplotlib
-    matplotlib.use('PDF')
-    import matplotlib.pylab as plt
-else:
-    import pylab as plt
-
 np.seterr(all='warn')
 #only raise an error if we are dividing by zero; this usually means we made a
 #mistake somewhere
@@ -282,8 +274,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 spkform : the learned templates
                 p   :   the estimated probability of firing for each template
     """
-    if debug:
-        plt.figure(figsize=(6, 10))
     if samplingRate == None:
         samplingRate = 30000.0
     states = kwargs.get('states')
@@ -434,27 +424,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         spkform = spikeForms['after_sparse']['spikeForms']
         p = spikeForms['after_sparse']['p']
 
-    if debug:
-        plt.gca().clear()
-        x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
-        plt.gcf().clear()
-        for i in xrange(spkform.shape[0]):
-            plt.subplot(spkform.shape[0],1,i+1)
-            plt.plot(x.T,spkform[i].T)
-        if save:
-            plt.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/learn_example_init.pdf'),bbox='tight')
-        else:
-            plt.draw()
-    if debug:
-        plt.gcf().clear()
-        for i in xrange(spkform.shape[0]):
-            plt.subplot(spkform.shape[0],1,i+1)
-            plt.plot(x.T,spkform[i].T)
-        if save:
-            plt.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/learn_example_combined.pdf'),bbox='tight')
-        else:
-            plt.draw()
-        
     if len(spkform)>0:
         if not 'second_learning' in spikeForms:
             #learn some more
@@ -486,16 +455,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 spkform = spikeForms['second_learning']['after_sparse']['spikeForms']
                 p = spikeForms['second_learning']['after_sparse']['p']
 
-
-        if debug:
-            plt.gcf().clear()
-            for i in xrange(spkform.shape[0]):
-                plt.subplot(spkform.shape[0],1,i+1)
-                plt.plot(x.T,spkform[i].T)
-            if save:
-                plt.savefig(os.path.expanduser('~/Documents/research/figures/SpikeSorting/hmm/learn_example_final.pdf'),bbox='tight')
-            else:
-                plt.draw()
 
         #remove spikes that are too small
         if len(spkform)>0:
@@ -536,10 +495,6 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
     else:
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
-    for j in xrange(neurons):
-        plt.subplot(neurons,1,j+1)
-        plt.plot(x.T,spkform[j].T)
-    plt.draw()
     N = len(spkform)
     if cinv == None:
         c = np.linalg.pinv(np.cov(data.T))
@@ -664,13 +619,6 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
                     #    print "Clustersplitting failed"
                     #    sys.stdout.flush()
 
-        for j in xrange(len(spkform)):
-            plt.subplot(neurons,1,j+1)
-            plt.gca().clear()
-            xx = np.arange(states)[None,:] + (states+12)*np.arange(levels)[:,None]
-            plt.plot(xx.T,spkform[j].T)
-        plt.draw()    
-
     #del g,fit 
     del g 
     for j in xrange(len(spkform)):
@@ -695,11 +643,6 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     else:
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
-    if debug:
-        for j in xrange(neurons):
-            plt.subplot(neurons,1,j+1)
-            plt.plot(x.T,spkform[j].T)
-        plt.draw()
     N = len(spkform)
     if cinv == None:
         if data.shape[1]>1:
@@ -917,12 +860,6 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                         print "\t\tClustersplitting failed"
                         sys.stdout.flush()
 
-        if debug:
-            for j in xrange(len(spkform)):
-                plt.subplot(len(spkform), 1,j+1)
-                plt.gca().clear()
-                plt.plot(x.T, spkform[j].T)
-            plt.draw()    
 
     #del g,fit 
     del g 
