@@ -18,7 +18,6 @@ import scipy.io as mio
 from hmmsort import extraction
 import time
 import blosc
-import shutil
 
 from hmmsort import utility
 
@@ -178,11 +177,6 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
                 outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
             else:
                 outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
-        if initFile is not None:
-            #create a copy of the initFile to be used to initalize the process
-            print "Using fitted templates from file %s" %(initFile, )
-            shutil.copyfile(initFile,outfile)
-            noiseOnly = True
         try:
             outf = h5py.File(outfile,'a')
         except IOError:
