@@ -355,7 +355,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             outFile['all']['p'] = p
             outFile.flush()
     if not 'after_combine' in spikeForms:
-        spkform,p = combineSpikes(spkform,p,cinv,data.shape[0])
+        spkform,p = combineSpikes(spkform,p,cinv,data.shape[0],
+                                 tolerance=kwargs.get('tolerance',100))
         spikeForms['after_combine'] = {'spikeForms':spkform,'p':p}
         if saveToFile and len(p)>0:
             if not 'after_combine' in outFile:
