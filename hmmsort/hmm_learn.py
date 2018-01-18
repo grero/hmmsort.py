@@ -1156,12 +1156,8 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
 
 
 if __name__ == '__main__':
+    
     import getopt
-    if len(sys.argv) == 1:
-        print """Usage: hmm_learn.py --sourceFile <sourceFile> --group <group>
-        [--version 3] [ --outFile <outfileName>] [--chunkSize 100000]
-        [--iterations 3] """
-        sys.exit(0)
     try:
 
         opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=',
@@ -1175,6 +1171,14 @@ if __name__ == '__main__':
                                                             'outputFile=',
                                                             'initFile=','states='])
 
+        if len(args) == 1:
+            #print help message and qute
+            print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
+            <channle number> --outFile <outfile name>  [--chunkSize 100000]
+            [--minFiringRate 0.5 Hz ] [--iterations 6] [--version 3]
+            """
+                            
+            sys.exit(0)
         opts = dict(opts)
 
         dataFileName = opts.get('--sourceFile')
