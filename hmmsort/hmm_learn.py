@@ -5,7 +5,6 @@ data
 """
 
 import numpy as np
-import scipy.weave as weave
 import scipy.stats as stats
 import sys
 import tempfile
@@ -108,7 +107,7 @@ def forward(g,P,spklength,N,winlength,p):
     M = g.shape[0]
     _np = len(p)
     q = np.concatenate(([N*(spklength-1)-1],np.arange(N*(spklength-1))),axis=0)
-    err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
+    #err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
 def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1000000,version=3,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False,**kwargs):
