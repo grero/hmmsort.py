@@ -117,53 +117,50 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     variable chunksize indicates the amount of data to load into memory. The
     variables nFileChunks and fileChunkId indicate, respectively, the number of
     file that the data file is divide into, and the chunk to process. 
-    initFile is an optional file containing already fitted templates. This
-    purpose of this argument is to get a better estimate of the noise by running
-    a single iteration.
     """
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
         return [], []
     
-    #channels is the 3rd argument
-    fid = open(dataFile,'r')
-    header_size = np.fromfile(fid,dtype=np.uint32,count=1)
-    nchannels = np.fromfile(fid,dtype=np.uint8,count=1).astype(np.uint32)
-    sampling_rate = np.fromfile(fid,dtype=np.uint32,count=1).astype(np.float)
-    #check whether the sampling rate is out of whack; if so, we try changing
-    #the order
-    if sampling_rate > 1e5:
-        #rewind to read the information again
-        fid.seek(4, 0)
-        sampling_rate = np.fromfile(fid,dtype=np.uint32,
-                                    count=1).astype(np.float)
-        nchannels = np.fromfile(fid,dtype=np.uint8,
-                                count=1).astype(np.uint32)
-    sampling_rate = min(30000.0,sampling_rate)
-    
-    fid.close()
     print "Reading data from file %s" %(dataFile, )
-    data,sr = extraction.readDataFile(dataFile)
-    sampling_rate = sr
+    # check what kind of file we are dealing with
+    fname,ext = dataFile.split('.')
+    if ext == 'mat':
+        if h5py.is_hdf5(dataFile):
+            ff = h5py.File(dataFile,'r')
+            data = ff["rh/data/analogData"][:].flatten()
+            sampling_rate = ff["rh/data/analogInfo/SampleRate"][:].flatten()
+            ff.close()
+        else:
+            rdata = mio.loadmat(dataFile)
+            data = rdata['rplhighpass']['data'][0,0]['analogData']
+            sampling_rate = rdata['rplhighpass']['data'][0,0]['analogInfo'][0,0]['sampleRate']
+    else:
+        data,sr = extraction.readDataFile(dataFile)
+        sampling_rate = sr
     head,tail = os.path.split(dataFile)
-    descriptorFile = '%s_descriptor.txt' % (tail[:tail.rfind('_')],)
-    if not os.path.isfile(descriptorFile):
-        descriptor = {'gr_nr': np.arange(1,nchannels+1),
-                      'ch_nr':np.arange(nchannels),
-                      'channel_status': np.ones((nchannels,),dtype=np.bool)}
+    if data.ndim == 2:
+        nchannels = data.shape[0]
+        descriptorFile = '%s_descriptor.txt' % (tail[:tail.rfind('_')],)
+        if not os.path.isfile(descriptorFile):
+            descriptor = {'gr_nr': np.arange(1,nchannels+1),
+                          'ch_nr':np.arange(nchannels),
+                          'channel_status': np.ones((nchannels,),dtype=np.bool)}
+        else:
+            #get group information form the descriptor
+            descriptor = fr.readDescriptor(descriptorFile)
+        if reorder == True:
+            reorder = np.loadtxt('reorder.txt',dtype=np.int)-1
+            data = data[reorder, :]
+        if channels == None:
+            channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
+        else:
+            group = descriptor['gr_nr'][np.lib.arraysetops.in1d(descriptor['ch_nr'],channels)]
+            group = np.unique(group)
+        cdata = data[channels, :].T.copy(order='C')
+        del data
     else:
-        #get group information form the descriptor
-        descriptor = fr.readDescriptor(descriptorFile)
-    if reorder == True:
-        reorder = np.loadtxt('reorder.txt',dtype=np.int)-1
-        data = data[reorder, :]
-    if channels == None:
-        channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
-    else:
-        group = descriptor['gr_nr'][np.lib.arraysetops.in1d(descriptor['ch_nr'],channels)]
-        group = np.unique(group)
-    cdata = data[channels, :].T.copy(order='C')
-    del data
+        cdata = data[:,None]
     if divideByGain and 'gain' in descriptor:
         cdata = cdata/np.float(descriptor['gain'])
     if nFileChunks!=None and fileChunkId!=None:
@@ -1271,6 +1268,12 @@ if __name__ == '__main__':
             spkforms = np.array(spkforms) 
             p = np.array(p)
             print "Found a total of %d spikeforms..." % (spkforms.shape[0],)
+#get descriptor information
+            #base = dataFileName[:dataFileName.rfind('_')]
+            #descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
+            #if not os.path.isfile(descriptorFile):
+#sometimes the descriptor is located one level up
+            #    descriptorFile = '../%s' % (descriptorFile,)
             descriptor = fr.readDescriptor(descriptorFile)
             channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
             #check for the presence of a session hdf5 file
