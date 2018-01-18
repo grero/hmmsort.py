@@ -24,10 +24,13 @@ if __name__ == '__main__':
     
     with open("hmmsort.dag","w") as fid:
         for f in files:
-            pp = f.split(os.sep)[-2]  # get the channel
-            ch = int(filter(str.isdigit, pp))
-            fid.write('JOB hmmlearn_%d hmmsort.cmd DIR %s\n' % (ch, os.getcwd()))
-            fid.write('JOB hmmdecode_%d hmmdecode.cmd DIR %s\n' % (ch, os.getcwd()))
+            pp = f.split(os.sep)  # get the channel
+            dd = os.sep.join(pp[:-1])
+            ch = int(filter(str.isdigit, pp[-2]))
+            fid.write('JOB hmmlearn_%d hmmsort.cmd\n' % (ch, ))
+            fid.write('VARS hmmlearn_%d fname=%s\n' %(ch, f))
+            fid.write('JOB hmmdecode_%d hmmdecode.cmd\n' % (ch, ))
+            fid.write('VARS hmmdecode_%d fname=%s\n' %(ch, f))
             fid.write('PARENT hmmlearn_%d CHILD hmmdecode_%d\n' % (ch, ch))
             fid.write('\n')
 
