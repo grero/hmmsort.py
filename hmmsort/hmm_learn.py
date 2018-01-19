@@ -174,6 +174,9 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     if save:
         if outfile == None:
             name,ext = os.path.splitext(tail)
+            if not ext[1:].isdigit():  # if the ext is not a chunkindex
+                # this is to avoid having .eg. mat.hdf5 as an extension
+                ext = ""
             name = name.replace('highpass','templates')
             if not os.path.isdir('hmmsort'):
                 os.mkdir('hmmsort')
