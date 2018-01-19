@@ -39,7 +39,7 @@ if __name__ == '__main__':
             fn = pp[-1]
             dd = os.sep.join(pp[:-1])
             # make sure that the output dir exists
-            outdir = os.path.isdir(os.sep.join(dd, "hmmsort"))
+            outdir = os.sep.join([dd, "hmmsort"])
             if not os.path.isdir(outdir):
                 os.mkdir(outdir)
             if ch is None:
