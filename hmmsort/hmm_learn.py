@@ -123,8 +123,8 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     
     print "Reading data from file %s" %(dataFile, )
     # check what kind of file we are dealing with
-    fname,ext = dataFile.split('.')
-    if ext == 'mat':
+    fname,ext = os.path.splitext(dataFile)
+    if ext == '.mat':
         if h5py.is_hdf5(dataFile):
             ff = h5py.File(dataFile,'r')
             data = ff["rh/data/analogData"][:].flatten()
