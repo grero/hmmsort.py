@@ -1,6 +1,6 @@
 universe = vanilla
 execroot = /Volumes/DataX/Users/grogee/Documents/programming/hmmsort
-executable = $(execroot)/dist/hmm_learn
+executable = $(execroot)/hmm_learn
 sortdir = hmmsort
 outfile = hmmsort/spike_templates.hdf5
 arguments = "--sourceFile $(fname) --iterations 3 --version 3 --chunkSize 100000 --outFile $(outfile)"
