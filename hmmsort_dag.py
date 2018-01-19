@@ -54,3 +54,5 @@ if __name__ == '__main__':
             fid.write('PARENT hmmlearn_%d CHILD hmmdecode_%d\n' % (ch, ch))
             fid.write('\n')
 
+    os.system('condor_submit_dag hmmsort.dag')
+    sys.exit(0)
