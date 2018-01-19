@@ -1,3 +1,4 @@
+import sys
 import os
 import glob
 
@@ -14,6 +15,10 @@ def level(cwd):
         
 
 if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        print "Usage: hmmsort_dag.py <execroot>"
+        sys.exit(0)
+    execroot = sys.argv[1]
     thislevel = level(os.getcwd())
     # get all highpass datafiles
     levelidx = levels.index(thislevel)
