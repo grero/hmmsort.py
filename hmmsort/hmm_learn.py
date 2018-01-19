@@ -181,6 +181,10 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
                 outfile = 'hmmsort/%sg%.4d%s.hdf5' % (name,group,ext)
             else:
                 outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
+        else: #if we did specify an outfile, make sure that the directory exist
+            pth,fname = os.path.split(outfile)
+            if not os.path.isdir(pth):
+                os.mkdir(pth)
         try:
             outf = h5py.File(outfile,'a')
         except IOError:
