@@ -127,8 +127,12 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     if ext == '.mat':
         if h5py.is_hdf5(dataFile):
             ff = h5py.File(dataFile,'r')
-            data = ff["rh/data/analogData"][:].flatten()
-            sampling_rate = ff["rh/data/analogInfo/SampleRate"][:].flatten()
+            if "rh" in ff.keys():
+                data = ff["rh/data/analogData"][:].flatten()
+                sampling_rate = ff["rh/data/analogInfo/SampleRate"][:].flatten()
+            elif "highpassdata" in ff.keys():  # this is a non-object file
+                data = ff["highpassdata/data/data"][:].flatten()
+                sampling_rate = ff["highpassdata/data/sampling_rate"][:].flatten()
             ff.close()
         else:
             rdata = mio.loadmat(dataFile)
