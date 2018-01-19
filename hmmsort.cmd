@@ -1,7 +1,7 @@
 universe = vanilla
 executable = /Volumes/DataX/Users/grogee/Documents/programming/hmmsort/dist/hmm_learn
 sortdir = hmmsort
-arguments = "--sourceFile $(dir)/$(fname) --iterations 3 --version 3 --chunkSize 100000"
+arguments = "--sourceFile $(fname) --iterations 3 --version 3 --chunkSize 100000"
 should_transfer_files = YES
 transfer_executable = true
 when_to_transfer_output = ON_EXIT
