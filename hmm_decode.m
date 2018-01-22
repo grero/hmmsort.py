@@ -136,8 +136,15 @@ try
         fparts = split(Args.SourceFile,'.');
         if fparts(end) == 'mat'
             fdata = load(Args.SourceFile);
-            data = fdata.rh.data.analogData;
-            samplingRate = fdata.rh.data.analogInfo.SampleRate;
+            if isfield(fdata, 'rh')
+                data = fdata.rh.data.analogData;
+                samplingRate = fdata.rh.data.analogInfo.SampleRate;
+            elseif isfield(fdata, 'highpassdata')
+                data = fdata.highpassdata.data.data;
+                samplingRate = fdata.highpassdata.data.sampling_rate;
+            else
+                error('Unknown input file structure');
+            end
         else
 
             header = ReadUEIFile('Filename',Args.SourceFile,'Header');
