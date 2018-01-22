@@ -56,6 +56,7 @@ if __name__ == '__main__':
             fid.write('VARS hmmdecode_%d execroot="%s"\n' %(ch, execroot))
             fid.write('PARENT hmmlearn_%d CHILD hmmdecode_%d\n' % (ch, ch))
             fid.write('\n')
+            ch = None
 
     if not '--dry-run' in dopts.keys():
         os.system('condor_submit_dag hmmsort.dag')
