@@ -103,7 +103,7 @@ def forward(g,P,spklength,N,winlength,p):
     #err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g 
 
-def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1000000,version=3,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False,**kwargs):
+def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1000000,version=3,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False, max_size=None, offset=0, **kwargs):
     """
     Learns templates from the file pointed to by dataFile. The data should be
     stored channel wise in int16 format, i.e. the resulting array should have
@@ -166,6 +166,9 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         cdata = data[:,None]
     if divideByGain and 'gain' in descriptor:
         cdata = cdata/np.float(descriptor['gain'])
+
+    if max_size is not None:
+        cdata = cdata[offset:offset+max_size,:]
     if nFileChunks!=None and fileChunkId!=None:
         #we should only process parts of the file
         fileChunkSize = np.ceil(1.0*cdata.shape[0]/nFileChunks)
@@ -1176,6 +1179,7 @@ if __name__ == '__main__':
                                                             'combine','chunkSize=',
                                                             'version=','debug',
                                                             'fileChunkSize=','redo',
+                                                            'max_size=', 'offset=',
                                                             'basePath=','channels=',
                                                             'reorder','iterations=',
                                                             'tempPath=',
@@ -1197,6 +1201,8 @@ if __name__ == '__main__':
         group = int(opts.get('--group','1'))
         splitp = np.float(opts.get('--minFiringRate','0.5'))
         chunkSize = min(int(opts.get('--chunkSize','100000')),100000)
+        maxSize = int(opts.get('--max_size', sys.maxint))
+        offset = int(opts.get('--offset', 0))
         version = int(opts.get('--version','3'))
         debug = opts.has_key('--debug')
         redo = opts.has_key('--redo')
@@ -1397,7 +1403,7 @@ if __name__ == '__main__':
                                                          version=version, debug=debug,
                                                          nFileChunks=nchunks, fileChunkId=tid,
                                                          redo=redo,iterations=iterations,
-                                                        tempPath=tempPath,initFile=initFile,states=states)
+                                                        tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset)
             except IOError:
                 print "Could not read/write to file"
                 traceback.print_exc(file=sys.stdout)
