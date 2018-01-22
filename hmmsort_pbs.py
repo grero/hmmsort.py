@@ -1,0 +1,70 @@
+#!/usr/bin/env python2.7
+import sys
+import os
+import glob
+import getopt
+import subprocess
+
+levels = ['day','session','array','channel']
+
+def level(cwd):
+     pp = cwd.split(os.sep)[-1]
+     ll = ''
+     if pp.isdigit():
+         ll = 'day'
+     else:
+         ll = pp.strip(''.join([str(i) for i in xrange(10)]))
+     return ll
+        
+
+if __name__ == '__main__':
+    opts, args = getopt.getopt(sys.argv[1:], '', longopts=['dry-run']) 
+    dopts = dict(opts)
+    if len(args) == 0:
+        print "Usage: hmmsort_dag.py [ --dry-run ] <execroot>"
+        sys.exit(0)
+    execroot = args[0]
+    thislevel = level(os.getcwd())
+    # get all highpass datafiles
+    levelidx = levels.index(thislevel)
+    if levelidx == len(levels)-1:
+        bb = "." 
+        ch = 1
+    else:
+        # construct a pattern for finding all highpass files below this level
+        bb = os.sep.join([levels[i]+"*" for i in xrange(levelidx+1,len(levels))])
+        ch = None
+    bb = os.sep.join([bb] + ["*highpass.mat"])
+    files = glob.glob(bb)
+    homedir = os.path.expanduser('~')
+    for i,f in enumerate(files):
+        fname_learn = "learn_job%.4d.pbs" %(i,)
+        fname_decode = "decode_job%.4d.pbs" %(i,)
+        pp = f.split(os.sep)
+        dd = os.sep.join([os.getcwd()] +  pp[:-1])
+        fn = pp[-1]
+        print pp
+        with open(fname_learn,"w") as fo:
+            fo.write("#PBS -l nodes=1:ppn=1\n")
+            fo.write("#PBS -l walltime=1.0:0.0:0.0\n")
+            fo.write("cd %s\n" %(dd,))
+            fo.write("%s/hmm_learn --sourceFile %s --iterations 3 --version 3 " %(execroot,fn))
+            fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
+            fo.write("--max_size 8000000\n")
+
+        if not "--dry-run" in dopts.keys():
+            sp = supprocess.Popen(['qsub %s' %(fname,)], stdout=subprocess.PIPE)
+            jobid = sp.stdout.read().strip()
+        with open(fname_decode,"w") as fo:
+            fo.write("#PBS -l nodes=1:ppn=1\n")
+            fo.write("#PBS -l walltime=1.0:0.0:0.0\n")
+            if not "--dry-run" in dopts.keys():
+                fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
+            fo.write("cd %s\n" %(dd,))
+            fo.write("%s/run_hmm_decode.sh SourceFile %s Group 1 " %(execroot,fn))
+            fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5\n")
+
+        if not "--dry-run" in dopts.keys():
+            sp2 = supprocess.Popen(['qsub %s' %(fname,)], stdout=subprocess.PIPE)
+            sp2.stdout.read()
+    sys.exit(0)
