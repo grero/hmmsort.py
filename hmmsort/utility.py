@@ -3,7 +3,6 @@ import numba
 import sys
 import tempfile
 import time
-import pylab as plt
 import blosc
 import os
 
@@ -151,11 +150,6 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     else:
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
-    if debug:
-        for j in xrange(neurons):
-            plt.subplot(neurons,1,j+1)
-            plt.plot(x.T,spkform[j].T)
-        plt.draw()
     N = len(spkform)
     if cinv is None:
         if data.shape[1]>1:
@@ -372,13 +366,6 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         print "\t\tClustersplitting failed"
                         sys.stdout.flush()
 
-        if debug:
-            for j in xrange(len(spkform)):
-                plt.subplot(len(spkform), 1,j+1)
-                plt.gca().clear()
-                plt.plot(x.T, spkform[j].T)
-            plt.draw()    
-        
 
     #del g,fit 
     del g 
