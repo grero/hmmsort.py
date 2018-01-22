@@ -980,7 +980,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
 
         #calculate max similarity with respect to the first template and shift by
         #calculated index
-        shift = np.ones((spks,))
+        shift = np.ones((spks,), dtype=np.int)
         for i in xrange(1,spks):
             difference_old = np.inf
             for j in xrange(spklennew):
