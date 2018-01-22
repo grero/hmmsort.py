@@ -2,6 +2,7 @@
 import sys
 import os
 import glob
+import getopt
 
 levels = ['day','session','array','channel']
 
@@ -16,10 +17,12 @@ def level(cwd):
         
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        print "Usage: hmmsort_dag.py <execroot>"
+    opts, args = getopt.getopt(sys.argv[1:], '', longopts=['dry-run']) 
+    dopts = dict(opts)
+    if len(args) == 0:
+        print "Usage: hmmsort_dag.py [ --dry-run ] <execroot>"
         sys.exit(0)
-    execroot = sys.argv[1]
+    execroot = args[0]
     thislevel = level(os.getcwd())
     # get all highpass datafiles
     levelidx = levels.index(thislevel)
@@ -54,5 +57,6 @@ if __name__ == '__main__':
             fid.write('PARENT hmmlearn_%d CHILD hmmdecode_%d\n' % (ch, ch))
             fid.write('\n')
 
-    os.system('condor_submit_dag hmmsort.dag')
+    if not '--dry-run' in dopts.keys():
+        os.system('condor_submit_dag hmmsort.dag')
     sys.exit(0)
