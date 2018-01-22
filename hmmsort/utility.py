@@ -405,3 +405,19 @@ def prepare_test(N=8,states=60,dim=1):
     b = np.zeros((g.shape[0],))
     
     return N,W,g,q,p,cinv,data.flatten(),spklength,f,b
+
+def getSessionName(path=None):
+    if path==None:
+        path = os.getcwd()
+    parts = path.split('/') 
+    name = path
+    if 'cluster' in parts[-1]:
+        name = ''.join((parts[-5],filter(lambda s: s.isdigit(),parts[-3])))
+    elif 'session' in parts[-1]:
+        name = ''.join((parts[-3],filter(lambda s: s.isdigit(),parts[-1])))
+    elif 'combinations' in parts[-2]:
+        name = ''.join((parts[-5],filter(lambda s: s.isdigit(),parts[-3])))
+    elif 'sort' in parts[-1]:
+        name = ''.join((parts[-4],filter(lambda s: s.isdigit(),parts[-2])))
+    return name
+
