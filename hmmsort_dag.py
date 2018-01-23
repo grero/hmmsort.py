@@ -17,12 +17,15 @@ def level(cwd):
         
 
 if __name__ == '__main__':
-    opts, args = getopt.getopt(sys.argv[1:], '', longopts=['dry-run']) 
+    opts, args = getopt.getopt(sys.argv[1:], 'h', longopts=['dry-run'])
     dopts = dict(opts)
-    if len(args) == 0:
-        print "Usage: hmmsort_dag.py [ --dry-run ] <execroot>"
+    if "-h" in dopts.keys():
+        print "Usage: hmmsort_dag.py [ --dry-run ] [ execroot ]"
         sys.exit(0)
-    execroot = args[0]
+    if len(args) == 0:
+        execroot,q = os.path.split(os.path.realpath(__file__))
+    else:
+        execroot = args[0]
     thislevel = level(os.getcwd())
     # get all highpass datafiles
     levelidx = levels.index(thislevel)
