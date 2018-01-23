@@ -8,6 +8,7 @@ should_transfer_files = YES
 transfer_executable = true
 when_to_transfer_output = ON_EXIT
 transfer_input_files = $(fname)
+transfer_output_files = $(sortdir)/$(outfile)
 output	=	$(sortdir)/hmmsort.out
 stream_output = true
 error	=	$(sortdir)/hmmsort.err
