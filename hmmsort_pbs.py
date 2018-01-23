@@ -21,7 +21,7 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], '', longopts=['dry-run']) 
     dopts = dict(opts)
     if len(args) == 0:
-        print "Usage: hmmsort_dag.py [ --dry-run ] <execroot>"
+        print "Usage: hmmsort_pbs.py [ --dry-run ] <execroot>"
         sys.exit(0)
     execroot = args[0]
     thislevel = level(os.getcwd())
