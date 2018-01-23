@@ -16,7 +16,7 @@
 
 function [mlseq,ll] = hmm_decode(varargin)
 
-Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile',[],'hdf5Path',[],'spikeForms',[],'data',[],'reorder',[],'maxSize',[],'maxCells',30,'DataFile','','samplingRate',[],'fileName',[],'patchLength',[],'prob',[],'cinv',[],'outlierThreshold',4,'parseOutput',0);
+Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile',[],'hdf5Path',[],'spikeForms',[],'data',[],'reorder',[],'maxSize',[],'maxCells',30,'DataFile','','samplingRate',[],'fileName',[],'patchLength',[],'prob',[],'cinv',[],'outlierThreshold',4,'parseOutput',0, 'SaveFile', '');
 Args.flags = {'save','hdf5','parseOutput'};
 [Args,varargin] = getOptArgs(varargin,Args);
 addpath helper_functions
@@ -303,35 +303,39 @@ try
 	[mlseq,ll] = cutsort(data, spkform, cinv, patchlength, p);
 	%save sequence to sorting file; if a source file was used, save to a file consistent with that name
 	if Args.save
-		if ~isempty(Args.SourceFile)
+		if ~isempty(Args.SourceFile) || ~isempty(Args.SaveFile)
 			if Args.parseOutput
 				parseHMMOutput(mlseq,spikeForms(:,:,2:end),sessionName,Args.Group,data,samplingRate);
 			end
 			%parts = strsplit(Args.SourceFile,'_');
 			%note strfind finds all the matches
-			idx = strfind(Args.SourceFile,'highpass');
-			if length(idx)>1
-				offset = idx(1)+length('highpass')+1;
-			else
-				offset = 1;
-			end
-			idx = idx(end);
-			if isempty(Args.Group) && ~isempty(Args.Channels)
-				if isempty(Args.DescriptorFile)
-					descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
-				else
-					descriptor = ReadDescriptor(Args.DescriptorFile);
-				end
-				Args.Group = descriptor.group(descriptor.channel==Args.Channels(1));
+            if isempty(Args.SaveFile)
+                idx = strfind(Args.SourceFile,'highpass');
+                if length(idx)>1
+                    offset = idx(1)+length('highpass')+1;
+                else
+                    offset = 1;
+                end
+                idx = idx(end);
+                if isempty(Args.Group) && ~isempty(Args.Channels)
+                    if isempty(Args.DescriptorFile)
+                        descriptor = ReadDescriptor([Args.SourceFile(1:idx-1) 'descriptor.txt']);
+                    else
+                        descriptor = ReadDescriptor(Args.DescriptorFile);
+                    end
+                    Args.Group = descriptor.group(descriptor.channel==Args.Channels(1));
 
-			end
-			nparts = strsplit(Args.SourceFile,'.');
-            if ~isempty(Args.Group)
-                fname = sprintf('%sg%.4d.%.4d.mat',Args.SourceFile(offset:idx-1),Args.Group,str2num(nparts{end}));
-			elseif ~isempty(Args.hdf5Path)
-                fname = sprintf('%s%s.%.4d.mat',Args.SourceFile(offset:idx-1),strrep(Args.hdf5Path,'/',''),str2num(nparts{end}));
+                end
+                nparts = strsplit(Args.SourceFile,'.');
+                if ~isempty(Args.Group)
+                    fname = sprintf('%sg%.4d.%.4d.mat',Args.SourceFile(offset:idx-1),Args.Group,str2num(nparts{end}));
+                elseif ~isempty(Args.hdf5Path)
+                    fname = sprintf('%s%s.%.4d.mat',Args.SourceFile(offset:idx-1),strrep(Args.hdf5Path,'/',''),str2num(nparts{end}));
+                else
+                    fname = sprintf('%s.%.4d.mat',Args.SourceFile(offset:idx-1),str2num(nparts{end}));
+                end
             else
-                fname = sprintf('%s.%.4d.mat',Args.SourceFile(offset:idx-1),str2num(nparts{end}));
+                fname = Args.SaveFile;
             end
 			disp(['Saving data to file ' fname '...']);
 			%if exist(fname)
