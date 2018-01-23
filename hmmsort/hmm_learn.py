@@ -1007,7 +1007,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
             s = s[:-1] + (s[-1]-1,)
             splineform_test_new = np.zeros(s)
             p_new = np.zeros((spks-1,))
-            shift_new = np.zeros((spks-1,))
+            shift_new = np.zeros((spks-1,), dtype=np.int)
             k =- 1 
             for count in xrange(spks):
                 if count != index[1]:
