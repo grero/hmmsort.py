@@ -40,7 +40,7 @@ if __name__ == '__main__':
     files = glob.glob(bb)
     
     with open("hmmsort.dag","w") as fid:
-        for f in files:
+        for (jid,f) in enumerate(files):
             pp = f.split(os.sep)  # get the channel
             fn = pp[-1]
             dd = os.sep.join(pp[:-1])
@@ -48,18 +48,19 @@ if __name__ == '__main__':
             outdir = os.sep.join([dd, "hmmsort"])
             if not os.path.isdir(outdir):
                 os.mkdir(outdir)
-            if ch is None:
+            if thislevel != 'channel':
                 ch = int(filter(str.isdigit, pp[-2]))
-            fid.write('JOB hmmlearn_%d %s/hmmsort.cmd DIR %s\n' % (ch, execroot,dd))
-            fid.write('VARS hmmlearn_%d fname="%s"\n' %(ch, fn))
-            fid.write('VARS hmmlearn_%d execroot="%s"\n' %(ch, execroot))
-            fid.write('JOB hmmdecode_%d %s/hmmdecode.cmd DIR %s\n' % (ch, execroot, dd))
-            fid.write('VARS hmmdecode_%d fname="%s"\n' %(ch, fn))
-            fid.write('VARS hmmdecode_%d outfile="hmmsort/spike_templates.hdf5"\n' %(ch, ))
-            fid.write('VARS hmmdecode_%d execroot="%s"\n' %(ch, execroot))
-            fid.write('PARENT hmmlearn_%d CHILD hmmdecode_%d\n' % (ch, ch))
+            fid.write('JOB hmmlearn_%d %s/hmmsort.cmd DIR %s\n' % (jid, execroot,dd))
+            fid.write('VARS hmmlearn_%d fname="%s"\n' %(jid, fn))
+            fid.write('VARS hmmlearn_%d execroot="%s"\n' %(jid, execroot))
+            fid.write('VARS hmmlearn_%d outfile="hmmsort/spike_templates.hdf5"\n' %(jid, ))
+            fid.write('SCRIPT PRE hmm_learn_%d %s/hmm_learn --initOnly --outFile hmmsort/spike_templates.hdf5\n' % (jid, execroot,))
+            fid.write('JOB hmmdecode_%d %s/hmmdecode.cmd DIR %s\n' % (jid, execroot, dd))
+            fid.write('VARS hmmdecode_%d fname="%s"\n' %(jid, fn))
+            fid.write('VARS hmmdecode_%d tempfile="spike_templates.hdf5"\n' %(jid, ))
+            fid.write('VARS hmmdecode_%d execroot="%s"\n' %(jid, execroot))
+            fid.write('PARENT hmmlearn_%d CHILD hmmdecode_%d\n' % (jid, jid))
             fid.write('\n')
-            ch = None
 
     if not '--dry-run' in dopts.keys():
         os.system('condor_submit_dag hmmsort.dag')
