@@ -229,7 +229,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
        
         #combine spkforms from both chunks
         if spkforms.shape[0]>=2:
-            spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
+            spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0], maxp=maxp)
     else:
         if save:
             outf.close()
@@ -369,8 +369,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             outFile['all']['p'] = p
             outFile.flush()
     if not 'after_combine' in spikeForms:
-        spkform,p = combineSpikes(spkform,p,cinv,data.shape[0],
-                                 tolerance=kwargs.get('tolerance',100))
+        spkform,p = combineSpikes(spkform,p,cinv,data.shape[0],maxp=maxp,
+                                 tolerance=1)
         spikeForms['after_combine'] = {'spikeForms':spkform,'p':p}
         if saveToFile and len(p)>0:
             if not 'after_combine' in outFile:
@@ -1389,7 +1389,7 @@ if __name__ == '__main__':
             if len(spkforms)>1:
                 print "Combining templates..."
                 sys.stdout.flush()
-                spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+                spkforms,p = combineSpikes(spkforms,p,cinv,winlen,maxp=maxp)
                 print "Left with %d templates .." %(len(p),)
             if len(spkforms)>0:
                 try:
