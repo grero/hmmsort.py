@@ -1184,13 +1184,13 @@ if __name__ == '__main__':
                                                             'reorder','iterations=',
                                                             'tempPath=',
                                                             'outputFile=',
-                                                            'initFile=','states='])
+                                                            'initFile=','states=','initOnly', 'maxp='])
 
-        if len(args) == 1:
-            #print help message and qute
+        if len(sys.argv) == 1:
+            #print help message and quit
             print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
-            [--minFiringRate 0.5 Hz ] [--iterations 6] [--version 3]
+            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF]
             """
                             
             sys.exit(0)
@@ -1211,6 +1211,21 @@ if __name__ == '__main__':
         tempPath = opts.get('--tempPath','/Volumes/Scratch')
         initFile = opts.get('--initFile')
         states = opts.get('--states')
+        initOnly = '--initOnly' in opts.keys()
+        maxp = np.float(opts.get('--maxp', 12.0))
+        if initOnly:
+            if outFileName is not None:
+                #simply initialize an empty hdf5 file
+                pth,fname = os.path.split(outFileName)
+                if not os.path.isdir(pth):
+                    os.mkdir(pth)
+                if not h5py.is_hdf5(outFileName):
+                    outf = h5py.File(outFileName,'a')
+                    outf.close()
+            sys.exit(0)
+
+            
+
         if states is not None:
             states = int(states)
         if not os.path.isdir(tempPath):
@@ -1408,6 +1423,9 @@ if __name__ == '__main__':
                 print "Could not read/write to file"
                 traceback.print_exc(file=sys.stdout)
                 sys.exit(99)
+    except SystemExit as ee:
+        # honour the request to quit by simply re-issuing the call to exit with the correct code
+        sys.exit(ee.code)
     except:
         print "An error occurred"
         traceback.print_exc(file=sys.stdout)
