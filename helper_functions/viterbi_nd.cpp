@@ -20,6 +20,7 @@
 #define _FILE_OFFSET_BITS 64
 //efine WIN32
 #include <mex.h> 
+#include <cstring>
 #include "viterbi.cpp"
 
 int mx_GetLen(const mxArray *a) {
