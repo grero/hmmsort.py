@@ -47,7 +47,7 @@ if __name__ == '__main__':
             fo.write("#PBS -l nodes=1:ppn=1\n")
             fo.write("#PBS -l walltime=10:00:00\n")
             fo.write("cd %s\n" %(dd,))
-            fo.write("%s/hmm_learn --sourceFile %s --iterations 3 --version 3 " %(execroot,fn))
+            fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
             fo.write("--max_size 8000000\n")
 
