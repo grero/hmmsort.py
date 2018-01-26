@@ -382,7 +382,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         spkform = spikeForms['after_combine']['spikeForms']
         p = spikeForms['after_combine']['p']
     if not 'after_noise' in spikeForms:
-        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
+        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('min_snr',1.0))
         spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
         if saveToFile and len(p)>0:
             if not 'after_noise' in outFile:
@@ -1184,13 +1184,13 @@ if __name__ == '__main__':
                                                             'reorder','iterations=',
                                                             'tempPath=',
                                                             'outputFile=',
-                                                            'initFile=','states=','initOnly', 'maxp='])
+                                                            'initFile=','states=','initOnly', 'maxp=', 'min_snr='])
 
         if len(sys.argv) == 1:
             #print help message and quit
             print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
-            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF]
+            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 1.0]
             """
                             
             sys.exit(0)
@@ -1213,6 +1213,7 @@ if __name__ == '__main__':
         states = opts.get('--states')
         initOnly = '--initOnly' in opts.keys()
         maxp = np.float(opts.get('--maxp', 12.0))
+        min_snr = np.float(opts.get('--min_snr', 1.0))
         if initOnly:
             if outFileName is not None:
                 #simply initialize an empty hdf5 file
@@ -1418,7 +1419,7 @@ if __name__ == '__main__':
                                                          version=version, debug=debug,
                                                          nFileChunks=nchunks, fileChunkId=tid,
                                                          redo=redo,iterations=iterations,
-                                                        tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset)
+                                                        tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset, min_snr=min_snr)
             except IOError:
                 print "Could not read/write to file"
                 traceback.print_exc(file=sys.stdout)
