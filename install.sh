@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TARGET=/opt/data2/Software/HTCondor
+TARGET=/opt/data2/Software/HMMSpikeSorting
 
 cp hmmsort_dag.py $TARGET/
 cp dist/hmm_learn $TARGET/
