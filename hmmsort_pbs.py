@@ -46,10 +46,11 @@ if __name__ == '__main__':
         with open(fname_learn,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
             fo.write("#PBS -l walltime=10:00:00\n")
+            fo.write("#PBS -l mem=6GB\n")
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
-            fo.write("--max_size 8000000\n")
+            fo.write("--max_size 1000000 --tempPath /hpctmp/lsihr/tmp/\n")
 
         if not "--dry-run" in dopts.keys():
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
