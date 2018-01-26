@@ -43,7 +43,6 @@ if __name__ == '__main__':
         pp = f.split(os.sep)
         dd = os.sep.join([os.getcwd()] +  pp[:-1])
         fn = pp[-1]
-        print pp
         with open(fname_learn,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
             fo.write("#PBS -l walltime=1.0:0.0:0.0\n")
