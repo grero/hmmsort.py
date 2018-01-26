@@ -45,7 +45,7 @@ if __name__ == '__main__':
         fn = pp[-1]
         with open(fname_learn,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
-            fo.write("#PBS -l walltime=1.0:0.0:0.0\n")
+            fo.write("#PBS -l walltime=10:00:00\n")
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/hmm_learn --sourceFile %s --iterations 3 --version 3 " %(execroot,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
@@ -56,7 +56,7 @@ if __name__ == '__main__':
             jobid = sp.stdout.read().strip()
         with open(fname_decode,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
-            fo.write("#PBS -l walltime=1.0:0.0:0.0\n")
+            fo.write("#PBS -l walltime=05:00:00\n")
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
             fo.write("cd %s\n" %(dd,))
