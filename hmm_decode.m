@@ -28,6 +28,13 @@ Args.flags = {'save','hdf5','parseOutput'};
 %           given
 
 try
+    %if no arguments are given, print a help message
+    if nargin == 0
+        disp('Usage: hmm_decode SourceFile[<source file> fileName <template file> [save] [hdf5] [SaveFile <file to save to>]');
+        mlseq = [];
+        ll = -Inf;
+        return
+    end
 	%check if we are not given a filename, but Args.Group is given
 	nargin
 	if isempty(Args.fileName) && ~isempty(Args.Group) && ~isempty(Args.SourceFile)
