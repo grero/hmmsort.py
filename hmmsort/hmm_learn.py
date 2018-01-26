@@ -229,7 +229,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
        
         #combine spkforms from both chunks
         if spkforms.shape[0]>=2:
-            spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0])
+            spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0], maxp=maxp)
     else:
         if save:
             outf.close()
@@ -369,8 +369,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             outFile['all']['p'] = p
             outFile.flush()
     if not 'after_combine' in spikeForms:
-        spkform,p = combineSpikes(spkform,p,cinv,data.shape[0],
-                                 tolerance=kwargs.get('tolerance',100))
+        spkform,p = combineSpikes(spkform,p,cinv,data.shape[0],maxp=maxp,
+                                 tolerance=1)
         spikeForms['after_combine'] = {'spikeForms':spkform,'p':p}
         if saveToFile and len(p)>0:
             if not 'after_combine' in outFile:
@@ -382,7 +382,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         spkform = spikeForms['after_combine']['spikeForms']
         p = spikeForms['after_combine']['p']
     if not 'after_noise' in spikeForms:
-        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
+        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('min_snr',1.0))
         spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
         if saveToFile and len(p)>0:
             if not 'after_noise' in outFile:
@@ -1007,7 +1007,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
             s = s[:-1] + (s[-1]-1,)
             splineform_test_new = np.zeros(s)
             p_new = np.zeros((spks-1,))
-            shift_new = np.zeros((spks-1,))
+            shift_new = np.zeros((spks-1,), dtype=np.int)
             k =- 1 
             for count in xrange(spks):
                 if count != index[1]:
@@ -1184,13 +1184,13 @@ if __name__ == '__main__':
                                                             'reorder','iterations=',
                                                             'tempPath=',
                                                             'outputFile=',
-                                                            'initFile=','states='])
+                                                            'initFile=','states=','initOnly', 'maxp=', 'min_snr='])
 
-        if len(args) == 1:
-            #print help message and qute
+        if len(sys.argv) == 1:
+            #print help message and quit
             print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
-            [--minFiringRate 0.5 Hz ] [--iterations 6] [--version 3]
+            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 1.0]
             """
                             
             sys.exit(0)
@@ -1211,6 +1211,22 @@ if __name__ == '__main__':
         tempPath = opts.get('--tempPath','/Volumes/Scratch')
         initFile = opts.get('--initFile')
         states = opts.get('--states')
+        initOnly = '--initOnly' in opts.keys()
+        maxp = np.float(opts.get('--maxp', 12.0))
+        min_snr = np.float(opts.get('--min_snr', 1.0))
+        if initOnly:
+            if outFileName is not None:
+                #simply initialize an empty hdf5 file
+                pth,fname = os.path.split(outFileName)
+                if not os.path.isdir(pth):
+                    os.mkdir(pth)
+                if not h5py.is_hdf5(outFileName):
+                    outf = h5py.File(outFileName,'a')
+                    outf.close()
+            sys.exit(0)
+
+            
+
         if states is not None:
             states = int(states)
         if not os.path.isdir(tempPath):
@@ -1374,7 +1390,7 @@ if __name__ == '__main__':
             if len(spkforms)>1:
                 print "Combining templates..."
                 sys.stdout.flush()
-                spkforms,p = combineSpikes(spkforms,p,cinv,winlen)
+                spkforms,p = combineSpikes(spkforms,p,cinv,winlen,maxp=maxp)
                 print "Left with %d templates .." %(len(p),)
             if len(spkforms)>0:
                 try:
@@ -1403,11 +1419,14 @@ if __name__ == '__main__':
                                                          version=version, debug=debug,
                                                          nFileChunks=nchunks, fileChunkId=tid,
                                                          redo=redo,iterations=iterations,
-                                                        tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset)
+                                                        tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset, min_snr=min_snr)
             except IOError:
                 print "Could not read/write to file"
                 traceback.print_exc(file=sys.stdout)
                 sys.exit(99)
+    except SystemExit as ee:
+        # honour the request to quit by simply re-issuing the call to exit with the correct code
+        sys.exit(ee.code)
     except:
         print "An error occurred"
         traceback.print_exc(file=sys.stdout)

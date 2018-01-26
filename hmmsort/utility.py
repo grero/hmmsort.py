@@ -354,7 +354,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                                  (p > splitp*4)*(maxamp>10))[0]
                     if len(j)>0:
                         j = j[np.random.random_integers(0,len(j)-1, 
-                                                        size=(1, 1))]
+                                                        size=(1,))][0]
                         W[i*(spklength-1)+1:(i+1)*(spklength-1)] = W[j*(spklength - 1) +
                                                                        1:(j + 1)*(spklength - 1)]*.98
                         p[i] = p[j] / 2
