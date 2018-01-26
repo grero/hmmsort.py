@@ -54,7 +54,7 @@ if __name__ == '__main__':
             fid.write('VARS hmmlearn_%d fname="%s"\n' %(jid, fn))
             fid.write('VARS hmmlearn_%d execroot="%s"\n' %(jid, execroot))
             fid.write('VARS hmmlearn_%d outfile="hmmsort/spike_templates.hdf5"\n' %(jid, ))
-            fid.write('SCRIPT PRE hmm_learn_%d %s/hmm_learn --initOnly --outFile hmmsort/spike_templates.hdf5\n' % (jid, execroot,))
+            fid.write('SCRIPT PRE hmmlearn_%d %s/hmm_learn --initOnly --outFile hmmsort/spike_templates.hdf5\n' % (jid, execroot,))
             fid.write('JOB hmmdecode_%d %s/hmmdecode.cmd DIR %s\n' % (jid, execroot, dd))
             fid.write('VARS hmmdecode_%d fname="%s"\n' %(jid, fn))
             fid.write('VARS hmmdecode_%d tempfile="spike_templates.hdf5"\n' %(jid, ))
