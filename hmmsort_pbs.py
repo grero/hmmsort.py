@@ -52,8 +52,7 @@ if __name__ == '__main__':
             fo.write("--max_size 8000000\n")
 
         if not "--dry-run" in dopts.keys():
-            sp = supprocess.Popen(['qsub %s' %(fname,)], stdout=subprocess.PIPE)
-            jobid = sp.stdout.read().strip()
+            jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
         with open(fname_decode,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
             fo.write("#PBS -l walltime=05:00:00\n")
@@ -64,6 +63,5 @@ if __name__ == '__main__':
             fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5\n")
 
         if not "--dry-run" in dopts.keys():
-            sp2 = supprocess.Popen(['qsub %s' %(fname,)], stdout=subprocess.PIPE)
-            sp2.stdout.read()
+             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
     sys.exit(0)
