@@ -26,7 +26,7 @@ class SimplerToolbar(NavigationToolbar):
     def __init__(self, *args, **kwargs):
         super(SimplerToolbar, self).__init__(*args, **kwargs)
         self.spiketrain_button = QPushButton()
-        pm = QPixmap(scriptDir + os.path.sep + "../spiketrain_button.png")
+        pm = QPixmap(scriptDir + os.path.sep + "/spiketrain_button.png")
         if hasattr(pm, 'setDevicePixelRatio'):
             pm.setDevicePixelRatio(self.canvas._dpi_ratio)
         self.spiketrain_button.setIcon(QIcon(pm))
@@ -58,6 +58,7 @@ class ViewWidget(QMainWindow):
         ax.set_ylabel("Amplitude")
 
         self.picked_lines = []
+        self.sampling_rate = -1.0
 
     def pick_event(self, event):
         artist = event.artist
@@ -81,14 +82,15 @@ class ViewWidget(QMainWindow):
         print "Saving spiketrains"
         qq = mio.loadmat(self.sortfile)
         if "samplingRate" not in qq.keys():
-            text, ok = QInputDialog.getText(self, 'Sampling rate',
-                                                  'Sampling rate [Hz] :')
-            if ok:
-                sampling_rate = float(text)
-            else:
-                return  # not able to continue with a sampling rate
+            if self.sampling_rate == -1.0:
+                text, ok = QInputDialog.getText(self, 'Sampling rate',
+                                                      'Sampling rate [Hz] :')
+                if ok:
+                    self.sampling_rate = float(text)
+                else:
+                    return  # not able to continue with a sampling rate
         else:
-            sampling_rate = qq["samplingRate"]
+            self.sampling_rate = qq["samplingRate"]
         template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
         nstates = self.waveforms.shape[-1]
         pidx = int(nstates/3)
@@ -99,7 +101,7 @@ class ViewWidget(QMainWindow):
             if not os.path.isdir(cdir):
                 os.mkdir(cdir)
             iidx = np.where(uidx == tt)[0]
-            timestamps = tidx[iidx]*1000/sampling_rate
+            timestamps = tidx[iidx]*1000/self.sampling_rate
             fname = cdir + os.path.sep + "spiketrain.mat"
             mio.savemat(fname, {"timestamps": timestamps,
                                 "spikeForm": self.waveforms[tt, :, :]})
