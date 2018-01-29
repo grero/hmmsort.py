@@ -44,7 +44,7 @@ try
 			Args.Group = str2num(Args.Group);
 		end
 		[pth,f,e] = fileparts(Args.SourceFile);
-	    idx = strfind(f,'_highpass');
+		    idx = strfind(f,'_highpass');
 		sessionName = f(1:idx-1);
 		%construct waveforms file and cut file
 		waveformsFile = sprintf('%s/../%sg%.4dwaveforms.bin',pth,sessionName,Args.Group);
@@ -352,7 +352,7 @@ try
 				spikeForms = shiftdim(spikeForms,-1);
 				spikeForms = permute(spikeForms,[2,1,3]);
 			end
-			save(fname,'mlseq','spikeForms','ll');
+			save(fname,'mlseq','spikeForms','lll', 'samplingRate');
 		else
 			save([Args.fileName '.mat'],'mlseq','ll','-append');
 			fname = [Args.fileName '.mat'];
