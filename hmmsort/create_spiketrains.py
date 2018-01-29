@@ -3,7 +3,8 @@ import os
 import scipy.io as mio
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget,
+                             QVBoxLayout, QPushButton, QInputDialog)
 from PyQt5.uic import loadUiType
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
@@ -79,8 +80,16 @@ class ViewWidget(QMainWindow):
     def save_spiketrains(self):
         print "Saving spiketrains"
         qq = mio.loadmat(self.sortfile)
+        if "samplingRate" not in qq.keys():
+            text, ok = QInputDialog.getText(self, 'Sampling rate',
+                                                  'Sampling rate [Hz] :')
+            if ok:
+                sampling_rate = float(text)
+            else:
+                return  # not able to continue with a sampling rate
+        else:
+            sampling_rate = qq["samplingRate"]
         template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
-        sampling_rate = 30000.0
         nstates = self.waveforms.shape[-1]
         pidx = int(nstates/3)
         uidx, tidx = np.where(qq["mlseq"] == pidx)
