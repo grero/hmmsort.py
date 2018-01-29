@@ -5,7 +5,6 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget,
                              QVBoxLayout, QPushButton, QInputDialog)
-from PyQt5.uic import loadUiType
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
