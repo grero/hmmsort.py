@@ -96,7 +96,8 @@ class ViewWidget(QMainWindow):
         for (ii, tt) in enumerate(template_idx):
             cname = "cell%02d" % (ii+1, )
             cdir = self.basedir + os.path.sep + cname
-            os.mkdir(cdir)
+            if not os.path.isdir(cdir):
+                os.mkdir(cdir)
             iidx = np.where(uidx == tt)[0]
             timestamps = tidx[iidx]*1000/sampling_rate
             fname = cdir + os.path.sep + "spiketrain.mat"
