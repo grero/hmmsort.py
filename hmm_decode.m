@@ -139,8 +139,8 @@ try
 		spkform = Args.spikeForms;
 	end
 	if ~isempty(Args.SourceFile) && isempty(Args.data)
-        fparts = split(Args.SourceFile,'.');
-        if fparts(end) == 'mat'
+        [filepath,name,ext] = fileparts(Args.SourceFile);
+        if ext == '.mat'
             fdata = load(Args.SourceFile);
             if isfield(fdata, 'rh')
                 data = fdata.rh.data.analogData;
