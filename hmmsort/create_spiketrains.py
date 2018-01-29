@@ -19,9 +19,10 @@ picked_lines = []
 
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 
+
 class SimplerToolbar(NavigationToolbar):
     toolitems = [t for t in NavigationToolbar.toolitems if
-                    t[0] in ("Home", "Pan", "Zoom")]
+                 t[0] in ("Home", "Pan", "Zoom")]
 
     def __init__(self, *args, **kwargs):
         super(SimplerToolbar, self).__init__(*args, **kwargs)
@@ -45,7 +46,7 @@ class ViewWidget(QMainWindow):
 
         self.figure_canvas = FigureCanvas(Figure())
         self.navigation_toolbar = SimplerToolbar(self.figure_canvas, self,
-                                                 coordinates=False) # turn off coordinates
+                                                 coordinates=False)  # turn off coordinates
         self.navigation_toolbar.spiketrain_button.clicked.connect(self.save_spiketrains)
         layout.addWidget(self.navigation_toolbar, 0)
         layout.addWidget(self.figure_canvas, 10)
