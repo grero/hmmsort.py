@@ -63,5 +63,5 @@ if __name__ == '__main__':
             fid.write('\n')
 
     if not '--dry-run' in dopts.keys():
-        os.system('condor_submit_dag hmmsort.dag')
+        os.system('condor_submit_dag -maxpre 10 hmmsort.dag')
     sys.exit(0)
