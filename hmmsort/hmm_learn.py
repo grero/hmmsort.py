@@ -1140,7 +1140,7 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
     Remove templates that do not exceed the twice the energy of an average noise
     patch
     """
-    if data == None:
+    if data is None:
         limit = spkform.shape[-1]*3
     else:
         tmp = spkform.shape[-1]
