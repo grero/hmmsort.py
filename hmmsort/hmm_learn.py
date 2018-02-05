@@ -382,7 +382,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         spkform = spikeForms['after_combine']['spikeForms']
         p = spikeForms['after_combine']['p']
     if not 'after_noise' in spikeForms:
-        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('min_snr',1.0))
+        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('min_snr',4.0))
         spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
         if saveToFile and len(p)>0:
             if not 'after_noise' in outFile:
@@ -1140,7 +1140,7 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
     Remove templates that do not exceed the twice the energy of an average noise
     patch
     """
-    if data == None:
+    if data is None:
         limit = spkform.shape[-1]*3
     else:
         tmp = spkform.shape[-1]
@@ -1151,7 +1151,7 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
             x = data[idx[i]:idx[i]+spkform.shape[-1],:].T
             test[i] = (x*np.dot(cinv,x)).sum()
         limit = np.median(test)
-    
+
     j = -1
     ind = []
     woe = np.zeros((spkform.shape[0],))
@@ -1190,7 +1190,7 @@ if __name__ == '__main__':
             #print help message and quit
             print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
-            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 1.0]
+            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 4.0]
             """
                             
             sys.exit(0)
@@ -1213,7 +1213,7 @@ if __name__ == '__main__':
         states = opts.get('--states')
         initOnly = '--initOnly' in opts.keys()
         maxp = np.float(opts.get('--maxp', 12.0))
-        min_snr = np.float(opts.get('--min_snr', 1.0))
+        min_snr = np.float(opts.get('--min_snr', 4.0))
         if initOnly:
             if outFileName is not None:
                 #simply initialize an empty hdf5 file
