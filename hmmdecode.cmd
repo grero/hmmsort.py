@@ -1,6 +1,6 @@
 universe = vanilla
 execroot = /Volumes/DataX/Users/grogee/Documents/programming/hmmsort
-executable = $(execroot)/run_hmm_decode.sh 
+executable = $(execroot)/hmm_decode.sh 
 sortdir = hmmsort
 tempfile = spike_templates.hdf5
 outfile = hmmsort.mat
