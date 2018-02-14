@@ -8,5 +8,7 @@ setup(name='hmmsort',
     author='Roger Herikstad',
     author_email='roger.herikstad@gmail.com',
     packages=['hmmsort'],
-    scripts=['hmmsort/hmm_learn.py', 'hmmsort/create_spiketrains.py']
+    scripts=['hmmsort/hmm_learn.py', 
+             'hmmsort/create_spiketrains.py',
+             'hmmsort/chunker.py']
 )
