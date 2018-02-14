@@ -4,6 +4,8 @@ import os
 import glob
 import getopt
 
+#TODO: Add a pre-screning function, e.g look at firing rate of multiunit activity
+
 levels = ['day','session','array','channel']
 
 def level(cwd):
