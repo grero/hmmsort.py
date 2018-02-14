@@ -1,0 +1,21 @@
+universe = vanilla
+execroot = /opt/data2/Software/HMMSpikeSorting/julia/v0.6/HMMSpikeSorter/src/builddir
+executable = $(execroot)/hmmsort 
+sortdir = hmmsort
+tempfile = spike_templates.hdf5
+outfile = hmmsort.mat
+arguments = "--datafile $(fname) --inputfile $(tempfile) --outputfile $(outfile)"
+transfer_executable = yes 
+should_transfer_files = yes
+when_to_transfer_output = ON_EXIT
+transfer_input_files = $(fname),$(tempfile),$(execroot)/libhmmsort.dylib, $(execroot)/libjulia.dylib
+transfer_output_files = $(outfile)
+output	=	$(sortdir)/hmm_decode.out
+stream_output = true
+error	=	$(sortdir)/hmm_decode.err
+stream_error = true
+log		=	$(sortdir)/hmm_decode.log
+getenv  = true
+request_memory=2G
+RunAsOwner = false
+queue 1 
