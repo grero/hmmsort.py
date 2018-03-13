@@ -1096,7 +1096,7 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
             else:
                 #compute variance
                 v = np.concatenate(([np.sqrt(teststat[i,j])/2,-np.sqrt(teststat[i,j])/2],np.zeros((diffnorm.size-2,))),axis=0).var()
-                h[i,j],pvalt[i,j] = (diffnorm.size-1)*v,stats.chisqprob((diffnorm.size-1)*v,diffnorm.size-1)
+                h[i,j],pvalt[i,j] = (diffnorm.size-1)*v,stats.distributions.chi2.sf((diffnorm.size-1)*v,diffnorm.size-1)
 
             #symmetry
             pvalt[j,i] = pvalt[i,j]
