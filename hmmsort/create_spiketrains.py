@@ -96,7 +96,7 @@ class ViewWidget(QMainWindow):
             pidx = int(nstates/3)
             if qq["mlseq"].shape[0] == self.waveforms.shape[0]:
                 uidx, tidx = np.where(qq["mlseq"][:] == pidx)
-            else
+            else:
                 tidx, uidx = np.where(qq["mlseq"][:] == pidx)
             for (ii, tt) in enumerate(template_idx):
                 cname = "cell%02d" % (ii+1, )
