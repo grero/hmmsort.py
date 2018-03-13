@@ -4,6 +4,8 @@ import os
 import glob
 import getopt
 
+#TODO: Add a pre-screning function, e.g look at firing rate of multiunit activity
+
 levels = ['day','session','array','channel']
 
 def level(cwd):
@@ -17,7 +19,8 @@ def level(cwd):
         
 
 if __name__ == '__main__':
-    opts, args = getopt.getopt(sys.argv[1:], 'h', longopts=['dry-run'])
+    opts, args = getopt.getopt(sys.argv[1:], 'h', longopts=['dry-run',
+                                                             'use-julia'])
     dopts = dict(opts)
     if "-h" in dopts.keys():
         print "Usage: hmmsort_dag.py [ --dry-run ] [ execroot ]"
@@ -26,6 +29,11 @@ if __name__ == '__main__':
         execroot,q = os.path.split(os.path.realpath(__file__))
     else:
         execroot = args[0]
+    if '--use-julia' in dopts.keys():
+        decode_cmd = "hmmdecode_julia.cmd"
+    else:
+        decode_cmd = "hmmdecode.cmd"
+
     thislevel = level(os.getcwd())
     # get all highpass datafiles
     levelidx = levels.index(thislevel)
@@ -55,10 +63,9 @@ if __name__ == '__main__':
             fid.write('VARS hmmlearn_%d execroot="%s"\n' %(jid, execroot))
             fid.write('VARS hmmlearn_%d outfile="spike_templates.hdf5"\n' %(jid, ))
             fid.write('SCRIPT PRE hmmlearn_%d %s/hmm_learn --initOnly --outFile spike_templates.hdf5\n' % (jid, execroot,))
-            fid.write('JOB hmmdecode_%d %s/hmmdecode.cmd DIR %s\n' % (jid, execroot, dd))
+            fid.write('JOB hmmdecode_%d %s/%s DIR %s\n' % (jid, execroot, decode_cmd, dd))
             fid.write('VARS hmmdecode_%d fname="%s"\n' %(jid, fn))
             fid.write('VARS hmmdecode_%d tempfile="spike_templates.hdf5"\n' %(jid, ))
-            fid.write('VARS hmmdecode_%d execroot="%s"\n' %(jid, execroot))
             fid.write('PARENT hmmlearn_%d CHILD hmmdecode_%d\n' % (jid, jid))
             fid.write('\n')
 

@@ -140,7 +140,7 @@ try
 	end
 	if ~isempty(Args.SourceFile) && isempty(Args.data)
         [filepath,name,ext] = fileparts(Args.SourceFile);
-        if ext == '.mat'
+        if strcmp(ext, '.mat')
             fdata = load(Args.SourceFile);
             if isfield(fdata, 'rh')
                 data = fdata.rh.data.analogData;

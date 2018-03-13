@@ -189,6 +189,8 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
                 outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
         else: #if we did specify an outfile, make sure that the directory exist
             pth,fname = os.path.split(outfile)
+            if not pth:
+                pth = "."
             if not os.path.isdir(pth):
                 os.mkdir(pth)
         try:
@@ -1218,6 +1220,8 @@ if __name__ == '__main__':
             if outFileName is not None:
                 #simply initialize an empty hdf5 file
                 pth,fname = os.path.split(outFileName)
+                if not pth:
+                    pth = "."
                 if not os.path.isdir(pth):
                     os.mkdir(pth)
                 if not h5py.is_hdf5(outFileName):
