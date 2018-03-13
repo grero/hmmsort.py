@@ -140,7 +140,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     prestates = states/3
     poststates = states/3
     levels = data.shape[1]
-    if spkform == None:
+    if np.all(spkform == None):
         neurons = 8
         amp = np.random.random(size=(neurons,levels))+0.5
         #amp = amp/amp.max(1)[:, None]
