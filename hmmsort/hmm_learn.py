@@ -155,7 +155,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         if reorder == True:
             reorder = np.loadtxt('reorder.txt',dtype=np.int)-1
             data = data[reorder, :]
-        if channels == None:
+        if np.all(channels == None):
             channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
         else:
             group = descriptor['gr_nr'][np.lib.arraysetops.in1d(descriptor['ch_nr'],channels)]
@@ -475,7 +475,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
     """
     The function runs the baum-welch algorithm on the specified data. Data shauld have dimensions of datapts X channels
     """
-    if spkform == None:
+    if np.all(spkform == None):
         neurons = 8
         levels = 4
         amp = np.random.random(size=(neurons,levels,))
@@ -486,11 +486,11 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
     N = len(spkform)
-    if cinv == None:
+    if np.all(cinv == None):
         c = np.linalg.pinv(np.cov(data.T))
     else:
         c = cinv
-    if p == None:
+    if np.all(p == None):
         p = 1.e-8*np.ones((N,))
     else:
         if len(p) < len(spkform):
@@ -623,7 +623,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     """
     prestates = states/3
     poststates = states/3
-    if spkform == None:
+    if np.all(spkform == None):
         neurons = 8
         amp = np.random.random(size=(neurons,levels))+0.5
         #amp = amp/amp.max(1)[:, None]
@@ -634,7 +634,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
     N = len(spkform)
-    if cinv == None:
+    if np.all(cinv == None):
         if data.shape[1]>1:
             c = np.linalg.pinv(np.cov(data.T))
         else:
@@ -642,7 +642,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             c = 1.0/data.var(0)
     else:
         c = cinv
-    if p == None:
+    if np.all(p == None):
         p = 1.e-8*np.ones((N,))
     else:
         if len(p) < len(spkform):
@@ -1313,7 +1313,7 @@ if __name__ == '__main__':
                     C = np.cov(alldata)
                     cinv = np.linalg.pinv(C)
 
-            if cinv == None: 
+            if np.all(cinv == None):
                 if os.path.isfile('%s_highpass.bin' %(base,)):
                     nchs = descriptor['channel_status'].sum()
                     alldata,sr = extraction.readDataFile('%s_highpass.bin' %(
