@@ -57,7 +57,7 @@ if __name__ == '__main__':
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
         with open(fname_decode,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
-            fo.write("#PBS -l walltime=05:00:00\n")
+            fo.write("#PBS -l walltime=12:00:00\n")
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
             fo.write("cd %s\n" %(dd,))
