@@ -157,7 +157,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
         else:
             #single dimension
             cinv = 1.0/data.var(0)
-    if p == None:
+    if np.all(p == None):
         p = 1.e-8*np.ones((N,))
     else:
         if len(p) < len(spkform):
