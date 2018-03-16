@@ -62,7 +62,7 @@ if __name__ == '__main__':
                 fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile %s Group 1 " %(execroot,fn))
-            fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5\n")
+            fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5 ")
 	    fo.write("SaveFile hmmsort.mat\n")
 
         if not "--dry-run" in dopts.keys():

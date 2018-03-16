@@ -33,7 +33,7 @@ elif os.path.isdir('/Volumes/DataX/tmp'):
 def gatherSpikeFormsFromGroup(group=1,sessionName=None,baseDir='hmmsort',globPattern=None):
     if globPattern == None:
         if sessionName == None:
-            #assume 
+            #assume
             pass
 
     files = glob.glob(globPattern)
@@ -64,11 +64,11 @@ def forward(g,P,spklength,N,winlength,p):
     tiny = exp(-700.0);
     for(t=1;t<winlength;t++)
     {
-       for(j=0;j<M;j++) 
+       for(j=0;j<M;j++)
        {
             g[j*winlength+t] = g[q[j]*winlength+t-1];
        }
-       S = 0; 
+       S = 0;
        for(j=0;j<_np;j++)
        {
             S+=p[j];
@@ -101,7 +101,7 @@ def forward(g,P,spklength,N,winlength,p):
     _np = len(p)
     q = np.concatenate(([N*(spklength-1)-1],np.arange(N*(spklength-1))),axis=0)
     #err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
-    return g 
+    return g
 
 def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1000000,version=3,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False, max_size=None, offset=0, **kwargs):
     """
@@ -110,17 +110,17 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     dimensions timepoints X channels. The first 4 bytes of the file should
     contain an uint32 designating the size of the header. The header itself
     should contain the number of channels, encoded as an uint8, and the sampling
-    rate, encoded as an uint32. 
+    rate, encoded as an uint32.
     Group indicates which tetrode group to analyze; the channels will be found
     by reading the descriptor file corresponding to the requested data file. The
     variable chunksize indicates the amount of data to load into memory. The
     variables nFileChunks and fileChunkId indicate, respectively, the number of
-    file that the data file is divide into, and the chunk to process. 
+    file that the data file is divide into, and the chunk to process.
     """
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
         return [], []
-    
+
     print "Reading data from file %s" %(dataFile, )
     # check what kind of file we are dealing with
     fname,ext = os.path.splitext(dataFile)
@@ -155,7 +155,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         if reorder == True:
             reorder = np.loadtxt('reorder.txt',dtype=np.int)-1
             data = data[reorder, :]
-        if channels == None:
+        if np.all(channels == None):
             channels = np.where(descriptor['gr_nr'][descriptor['channel_status']]==group)[0]
         else:
             group = descriptor['gr_nr'][np.lib.arraysetops.in1d(descriptor['ch_nr'],channels)]
@@ -172,7 +172,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     if nFileChunks!=None and fileChunkId!=None:
         #we should only process parts of the file
         fileChunkSize = np.ceil(1.0*cdata.shape[0]/nFileChunks)
-    
+
         cdata = cdata[fileChunkId*fileChunkSize:(fileChunkId+1)*fileChunkSize, :]
     if save:
         if outfile == None:
@@ -189,6 +189,8 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
                 outfile = 'hmmsort/%sg%.4d%s.%d.hdf5' % (name,group,ext,fileChunkId)
         else: #if we did specify an outfile, make sure that the directory exist
             pth,fname = os.path.split(outfile)
+            if not pth:
+                pth = "."
             if not os.path.isdir(pth):
                 os.mkdir(pth)
         try:
@@ -210,13 +212,13 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             try:
                 sp,pp,_ = learnTemplates(cdata[i*chunksize:(i+1)*chunksize,:],samplingRate = sampling_rate,**kwargs)
 
-                spkforms.extend(sp) 
+                spkforms.extend(sp)
                 p.extend(pp)
                 if save and len(sp)>0:
                     try:
                         outf.create_group('chunk%d' %(i,))
                         outf['chunk%d' %(i,)]['spikeForms'] = sp
-                        outf['chunk%d' %(i,)]['p'] = pp 
+                        outf['chunk%d' %(i,)]['p'] = pp
                     except:
                         pass
                     finally:
@@ -226,7 +228,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         spkforms = np.array(spkforms)
         p = np.array(p)
         #spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
-       
+
         #combine spkforms from both chunks
         if spkforms.shape[0]>=2:
             spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0], maxp=maxp)
@@ -272,14 +274,14 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
 
 def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=3,
                    saveToFile=False,redo=False,iterations=3,**kwargs):
-    """ 
+    """
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
             data    :   npoints X nchannels
             splitp  :   scalar  :   minimum firing rate accepted for a neuron in Hz
             samplingRate    :   scalar  :   sampling rate of the data in Hz
             debug   :   boolean :   if true, spikeforms are plotted as they are discovered and refined
-            save    :   boolean :   if true, the debug plots are saved 
+            save    :   boolean :   if true, the debug plots are saved
         Outputs:
                 spkform : the learned templates
                 p   :   the estimated probability of firing for each template
@@ -327,7 +329,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 p = outFile['after_combine']['p'][:]
                 spikeForms['after_combine']  = {'spikeForms': spkform,
                                    'p': p}
-            if 'after_sparse' in outFile: 
+            if 'after_sparse' in outFile:
                 spkform = outFile['after_sparse']['spikeForms'][:]
                 p = outFile['after_sparse']['p'][:]
                 spikeForms['after_sparse'] = {'spikeForms': spkform,
@@ -354,7 +356,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                         spikeForms['second_learning']['after_noise'] = {'spikeForms': spkform,
                                                      'p': p}
 
-    if not 'all' in spikeForms:  
+    if not 'all' in spikeForms:
         data,spkform,p,cinv = learnf(data,iterations=iterations,debug=debug,
                                      levels=data.shape[1],**kwargs)
         try:
@@ -465,7 +467,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             spikeForms['second_learning']['after_noise'] = {'spikeForms':spkform,'p':p}
         if saveToFile:
             outFile.close()
-            
+
     return spikeForms,cinv
 
 
@@ -473,7 +475,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
     """
     The function runs the baum-welch algorithm on the specified data. Data shauld have dimensions of datapts X channels
     """
-    if spkform == None:
+    if np.all(spkform == None):
         neurons = 8
         levels = 4
         amp = np.random.random(size=(neurons,levels,))
@@ -484,11 +486,11 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
     N = len(spkform)
-    if cinv == None:
+    if np.all(cinv == None):
         c = np.linalg.pinv(np.cov(data.T))
     else:
         c = cinv
-    if p == None:
+    if np.all(p == None):
         p = 1.e-8*np.ones((N,))
     else:
         if len(p) < len(spkform):
@@ -502,7 +504,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         p = p.T
     """
     p_reset = p
-    
+
     winlength,dim = data.shape
     spklength = spkform.shape[-1]
     #W = np.zeros((dim,N*(spklength-1)+1))
@@ -511,7 +513,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
     """
     for i in xrange(N):
         W[:,1+(spklength-1)*i:(i+1)*(spklength-1)] = spkform[i,:,1:]
-   """ 
+   """
     g = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
     #fit = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
     #this is an index vector
@@ -527,7 +529,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         b = np.zeros((g.shape[0],))
         g[0,0] = 1
         b[0] = 1
-        #compute probabilities  
+        #compute probabilities
         #note that we are looping over number of states here; the most we are
         #creating is 2Xdata.nbytes
         """
@@ -569,7 +571,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
             b[(spklength-1):1+(N-1)*(spklength-1):(spklength-1)] = b[-1]
             b = b/(b.sum()+tiny)
             g[:,t] = g[:,t]*b
-        
+
         g = g/(g.sum(0)+tiny)[None,:]
         #TODO: This stop could be quite memory intensive
         #W = np.dot(data.T,g.T)/g.sum(1)[None,:]
@@ -580,7 +582,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         W[:,0] = 0
         p = g[1::(spklength-1),:].sum(1).T/winlength
         cinv = np.linalg.pinv(np.cov((data-np.dot(g.T,W.T)).T))
-       
+
         maxamp = np.zeros((len(spkform),))
         for j in xrange(len(spkform)):
             spkform[j] = np.concatenate((W[:,0][:,None],W[:,j*(spklength-1)+1:(j+1)*(spklength-1)+1]),axis=1)
@@ -588,7 +590,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
 
         nspikes = p*winlength
 
-        print "Spikes found per template: " 
+        print "Spikes found per template: "
         print ' '.join((map(lambda s: '%.2f' %s,nspikes)))
         sys.stdout.flush()
         if dosplit:
@@ -607,11 +609,11 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
                     #    print "Clustersplitting failed"
                     #    sys.stdout.flush()
 
-    #del g,fit 
-    del g 
+    #del g,fit
+    del g
     for j in xrange(len(spkform)):
         spkform[j,:,:-1] = np.concatenate((W[:,1][:,None], W[:,j*(spklength-1)+1:(j+1)*(spklength-1)]),axis=1)
-    
+
     return data,spkform,p,cinv
 
 def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,
@@ -621,7 +623,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     """
     prestates = states/3
     poststates = states/3
-    if spkform == None:
+    if np.all(spkform == None):
         neurons = 8
         amp = np.random.random(size=(neurons,levels))+0.5
         #amp = amp/amp.max(1)[:, None]
@@ -632,7 +634,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         neurons,levels,spklength = spkform.shape
     x = np.arange(spkform.shape[-1]) + (spkform.shape[-1]+10)*np.arange(spkform.shape[1])[:,None]
     N = len(spkform)
-    if cinv == None:
+    if np.all(cinv == None):
         if data.shape[1]>1:
             c = np.linalg.pinv(np.cov(data.T))
         else:
@@ -640,7 +642,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             c = 1.0/data.var(0)
     else:
         c = cinv
-    if p == None:
+    if np.all(p == None):
         p = 1.e-8*np.ones((N,))
     else:
         if len(p) < len(spkform):
@@ -650,7 +652,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         splitp = .5/40000
 
     p_reset = p
-    
+
     winlength,dim = data.shape
     spklength = spkform.shape[-1]
     W = spkform[:,:,1:].transpose((1,0,2)).reshape(dim,N*(spklength-1))
@@ -658,7 +660,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     """
     for i in xrange(N):
         W[:,1+(spklength-1)*i:(i+1)*(spklength-1)] = spkform[i,:,1:]
-   """ 
+   """
     #this is an index vector
     q = np.concatenate(([N*(spklength-1)],np.arange(N*(spklength-1))),axis=0)
     tiny = np.exp(-700)
@@ -669,7 +671,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     nchunks = len(chunksizes)
     dt = 0
     for bw in xrange(iterations):
-        print "Iteration %d of %d" % (bw, 
+        print "Iteration %d of %d" % (bw,
                                      iterations)
         sys.stdout.flush()
         files = ['']*nchunks
@@ -679,7 +681,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         b = np.zeros((g.shape[0],))
         g[0,0] = 1
         b[0] = 1
-        #compute probabilities  
+        #compute probabilities
         #note that we are looping over number of states here; the most we are
         #creating is 2Xdata.nbytes
         #forward
@@ -688,7 +690,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         #do this in chunks
         try:
             for i in xrange(nchunks):
-                print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
+                print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks)
                 #create on file per chunk; don't delete since we'll need it when we
                 #run the backward sweep
                 fid = tempfile.NamedTemporaryFile(dir=tempPath,delete=False)
@@ -751,9 +753,9 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             #backward
             print "\tRunning backward algorithm..."
             sys.stdout.flush()
-            G = np.zeros((g.shape[0], )) 
+            G = np.zeros((g.shape[0], ))
             for i in xrange(nchunks - 1, -1, -1):
-                print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks) 
+                print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks)
                 #reopen the tempfile corresponding to this chunk
                 fid = open(files[i],'r')
                 a = chunks[i]*(N*(spklength - 1) + 1)
@@ -781,7 +783,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 fid = open(files[i],'w')
                 fid.write(gp)
                 fid.close()
-            
+
             #TODO: This stop could be quite memory intensive
             W = np.zeros(W.shape)
             for i in xrange(nchunks):
@@ -812,7 +814,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             cinv = np.linalg.pinv(np.cov((data-D).T))
         else:
             cinv = 1.0/(data-D).var(0)
-       
+
         maxamp = np.zeros((len(spkform),))
         for j in xrange(len(spkform)):
             spkform[j] = np.concatenate((W[:,0][:,None],
@@ -822,7 +824,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
 
         nspikes = p*winlength
 
-        print "\tSpikes found per template: " 
+        print "\tSpikes found per template: "
         print ' '.join((map(lambda s: '%.2f' %s,nspikes)))
         sys.stdout.flush()
         if dosplit:
@@ -835,7 +837,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                     try:
                         j = np.where((p>=np.median(p))*
                                      (p > splitp*4)*(maxamp>10))[0]
-                        j = j[np.random.random_integers(0,len(j)-1, 
+                        j = j[np.random.random_integers(0,len(j)-1,
                                                         size=(1, 1))]
                         W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength - 1) +
                                                                        1:(j + 1)*(spklength - 1)]*.98
@@ -849,13 +851,13 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                         sys.stdout.flush()
 
 
-    #del g,fit 
-    del g 
+    #del g,fit
+    del g
     for j in xrange(len(spkform)):
-        spkform[j,:,:-1] = np.concatenate((W[:,1][:,None], 
+        spkform[j,:,:-1] = np.concatenate((W[:,1][:,None],
                                            W[:,j*(spklength-1)+1:(j+1)*(spklength-1)])
                                           ,axis=1)
-    
+
     return data,spkform,p,cinv
 
 def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4,alpha=0.05):
@@ -886,7 +888,7 @@ def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4,alpha=0.05):
         idx = dd.argmin(1)
         Ss = np.concatenate((S[0,:,:][None,:,:],S[np.arange(1,S.shape[0])[:,None,None],np.arange(levels)[None,:,None],I[idx][:,None,:]]),axis=0)
         D = dd[np.arange(dd.shape[0])[:,None],idx[:,None]]
-         
+
         #find the smallest aligned distances and merge if those distances are
         #not outlier
         #combine spikes for which the difference is insignificant. Make use of the
@@ -912,11 +914,11 @@ def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4,alpha=0.05):
             print "Could not combine any more"
             sys.stdout.flush()
             toConsider-=1
-            
+
             S = np.roll(S,-1,axis=0)
             p = np.roll(p,-1,axis=0)
             #reset
-            doCombine = True 
+            doCombine = True
         print "Waveforms left to consider: %d" % (toConsider,)
         sys.stdout.flush()
         """
@@ -934,12 +936,12 @@ def combineSpikes2(spkforms_old,pp,cinv,winlen,tolerance=4,alpha=0.05):
     S = interpolate.interp1d(xx,S,axis=-1)(np.arange(nstates))
     return S,p
 
-def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4, 
+def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
                   alpha=0.001,maxp=12.0):
 
     winlen = winlen/tolerance
     spks,dim,spklen = spkform_old.shape
-    j =-1 
+    j =-1
     k = spks-1
     p = np.zeros((spks,))
     forms = np.zeros(spkform_old.shape)
@@ -960,13 +962,13 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
     spkform_old = forms
     spkform = spkform_old
     pp = p
-    excl = np.array([j+1,spks-1]) 
+    excl = np.array([j+1,spks-1])
     spks = j+1
     numspikes = j+1
 
     #combine larger spikes
     #for r in xrange(numspikes):
-    r =0 
+    r =0
     while r < numspikes:
         r+=1
         spklennew = spklen*10+10
@@ -992,7 +994,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
 
             splineform[:,:,i] = np.concatenate((splineform[:,shift[i]:,i],splineform[:,:shift[i],i]),axis=1)
             splineform_test[:,:,i] = np.concatenate((splineform_test[:,shift[i]:,i],splineform_test[:,:shift[i],i]),axis=1)
-            
+
         index,docombine,value = combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha)
 
         while docombine:
@@ -1008,7 +1010,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
             splineform_test_new = np.zeros(s)
             p_new = np.zeros((spks-1,))
             shift_new = np.zeros((spks-1,), dtype=np.int)
-            k =- 1 
+            k =- 1
             for count in xrange(spks):
                 if count != index[1]:
                     k+=1
@@ -1026,7 +1028,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
 
         print "Could not combine any more: value %.3f" % (value,)
         sys.stdout.flush()
-        
+
         #shift back
         for i in xrange(1,spks):
             if shift[i]!=1:
@@ -1041,7 +1043,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
                 S[k] = interpolate.spline(np.arange(splineform.shape[1]),splineform[k,:,i],np.arange(21,splineform.shape[1]+1,10)-10)
             spkform[i] = np.concatenate((np.zeros((splineform.shape[0],1)),S),axis=1)
 
-            
+
         #rotate order of the templates
         #ptemp =np.zeros((spks,))
         #forms = np.zeros(spkform.shape)
@@ -1070,7 +1072,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
         p[i] = pp[j]
     """
 
-    return spkform,p 
+    return spkform,p
 
 def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
 
@@ -1079,7 +1081,7 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
         docombine = 0
         value = 0
         return index,docombine,value
-    _cinv = np.atleast_2d(cinv) 
+    _cinv = np.atleast_2d(cinv)
     splineform = splineform[:,splineform_test[0,:,:].sum(-1)==spks,:]
     h = np.zeros((spks,spks))
     pvalt = np.zeros((spks,spks))
@@ -1096,11 +1098,11 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
             else:
                 #compute variance
                 v = np.concatenate(([np.sqrt(teststat[i,j])/2,-np.sqrt(teststat[i,j])/2],np.zeros((diffnorm.size-2,))),axis=0).var()
-                h[i,j],pvalt[i,j] = (diffnorm.size-1)*v,stats.chisqprob((diffnorm.size-1)*v,diffnorm.size-1)
+                h[i,j],pvalt[i,j] = (diffnorm.size-1)*v,stats.distributions.chi2.sf((diffnorm.size-1)*v,diffnorm.size-1)
 
             #symmetry
             pvalt[j,i] = pvalt[i,j]
-            
+
 
     teststat += teststat.T + np.eye(teststat.shape[0])*teststat.max(0).max()*10
 
@@ -1155,7 +1157,7 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
     j = -1
     ind = []
     woe = np.zeros((spkform.shape[0],))
-    pp = [] 
+    pp = []
     new_spkform = []
 
     for i in xrange(spkform.shape[0]):
@@ -1170,7 +1172,7 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
 
 
 if __name__ == '__main__':
-    
+
     import getopt
     try:
 
@@ -1192,7 +1194,7 @@ if __name__ == '__main__':
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
             [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 4.0]
             """
-                            
+
             sys.exit(0)
         opts = dict(opts)
 
@@ -1218,6 +1220,8 @@ if __name__ == '__main__':
             if outFileName is not None:
                 #simply initialize an empty hdf5 file
                 pth,fname = os.path.split(outFileName)
+                if not pth:
+                    pth = "."
                 if not os.path.isdir(pth):
                     os.mkdir(pth)
                 if not h5py.is_hdf5(outFileName):
@@ -1225,7 +1229,7 @@ if __name__ == '__main__':
                     outf.close()
             sys.exit(0)
 
-            
+
 
         if states is not None:
             states = int(states)
@@ -1247,7 +1251,7 @@ if __name__ == '__main__':
                     channels.append(int(c))
 
         if '--combine' in opts:
-#get all the data file, read the spkforms from each, then combine them 
+#get all the data file, read the spkforms from each, then combine them
             #get the descriptor, if any
             descriptorFile = glob.glob('*_descriptor.txt')
             if len(descriptorFile)==0:
@@ -1259,7 +1263,7 @@ if __name__ == '__main__':
             #get the sort files
             sortFiles = glob.glob('hmmsort/%s_highpassg%.4d.*.hdf5'% (base,group))
             if dataFileName == None:
-                #try to guess from the group 
+                #try to guess from the group
                 pass
             else:
                 files = opts.get('--sourceFile','').split(',')
@@ -1276,8 +1280,8 @@ if __name__ == '__main__':
                     useFiles.append(f)
                 except:
                     continue
-            files = useFiles   
-            spkforms = np.array(spkforms) 
+            files = useFiles
+            spkforms = np.array(spkforms)
             p = np.array(p)
             print "Found a total of %d spikeforms..." % (spkforms.shape[0],)
 #get descriptor information
@@ -1309,14 +1313,14 @@ if __name__ == '__main__':
                     C = np.cov(alldata)
                     cinv = np.linalg.pinv(C)
 
-            if cinv == None: 
+            if np.all(cinv == None):
                 if os.path.isfile('%s_highpass.bin' %(base,)):
                     nchs = descriptor['channel_status'].sum()
                     alldata,sr = extraction.readDataFile('%s_highpass.bin' %(
                         base,))
                     alldata = alldata[channels,:]
-                else: 
-                    if '--basePath' in opts: 
+                else:
+                    if '--basePath' in opts:
                         dataFiles = glob.glob('%s/%s_highpass.[0-9]*' % (opts.get('--basePath'),base,))
                     else:
                         dataFiles = glob.glob('%s_highpass.[0-9]*' % (base,))
@@ -1353,12 +1357,12 @@ if __name__ == '__main__':
                         print "Loading data from file %s..." %(f,)
                         sys.stdout.flush()
                         data,sr = extraction.readDataFile(f)
-                        
+
                         #data = np.memmap(f,mode='r',dtype=np.int16,offset=73,shape=((os.stat(f).st_size-73)/2/nchs,nchs))
                         alldata[:,offset:offset+data.shape[1]] = data[channels,:]
                         alldata.flush()
                         offset+=data.shape[1]
-                    
+
                 print "Computing inverse covariance matrix..."
                 sys.stdout.flush()
                 cinv = np.linalg.pinv(np.cov(alldata))
@@ -1367,7 +1371,7 @@ if __name__ == '__main__':
                 dataFile['cinv'] = cinv
                 dataFile.create_group('spikeFormsAll')
                 dataFile['spikeFormsAll']['spikeForms'] = spkforms
-                dataFile['spikeFormsAll']['p'] = p 
+                dataFile['spikeFormsAll']['p'] = p
                 dataFile.flush()
             except:
 #field already exists
@@ -1412,7 +1416,7 @@ if __name__ == '__main__':
                 tid = int(os.environ['SGE_TASK_ID'])-1
                 print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid+1)
                 sys.stdout.flush()
-                
+
             try:
                 spikeForms,cinv = learnTemplatesFromFile(dataFileName, group, splitp=splitp,
                                                          outfile=outFileName, chunksize=chunkSize,

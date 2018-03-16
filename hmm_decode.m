@@ -140,7 +140,7 @@ try
 	end
 	if ~isempty(Args.SourceFile) && isempty(Args.data)
         [filepath,name,ext] = fileparts(Args.SourceFile);
-        if ext == '.mat'
+        if strcmp(ext, '.mat')
             fdata = load(Args.SourceFile);
             if isfield(fdata, 'rh')
                 data = fdata.rh.data.analogData;
@@ -352,7 +352,7 @@ try
 				spikeForms = shiftdim(spikeForms,-1);
 				spikeForms = permute(spikeForms,[2,1,3]);
 			end
-			save(fname,'mlseq','spikeForms','lll', 'samplingRate');
+			save(fname,'mlseq','spikeForms','ll', 'samplingRate');
 		else
 			save([Args.fileName '.mat'],'mlseq','ll','-append');
 			fname = [Args.fileName '.mat'];
