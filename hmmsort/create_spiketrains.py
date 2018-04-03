@@ -80,31 +80,34 @@ class ViewWidget(QMainWindow):
 
     def save_spiketrains(self):
         print "Saving spiketrains"
-        qq = mio.loadmat(self.sortfile)
-        if "samplingRate" not in qq.keys():
-            if self.sampling_rate == -1.0:
-                text, ok = QInputDialog.getText(self, 'Sampling rate',
-                                                      'Sampling rate [Hz] :')
-                if ok:
-                    self.sampling_rate = float(text)
-                else:
-                    return  # not able to continue with a sampling rate
-        else:
-            self.sampling_rate = qq["samplingRate"]
-        template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
-        nstates = self.waveforms.shape[-1]
-        pidx = int(nstates/3)
-        uidx, tidx = np.where(qq["mlseq"] == pidx)
-        for (ii, tt) in enumerate(template_idx):
-            cname = "cell%02d" % (ii+1, )
-            cdir = self.basedir + os.path.sep + cname
-            if not os.path.isdir(cdir):
-                os.mkdir(cdir)
-            iidx = np.where(uidx == tt)[0]
-            timestamps = tidx[iidx]*1000/self.sampling_rate
-            fname = cdir + os.path.sep + "spiketrain.mat"
-            mio.savemat(fname, {"timestamps": timestamps,
-                                "spikeForm": self.waveforms[tt, :, :]})
+        with h5py.File(self.sortfile, "r") as qq: 
+            if ("samplingRate" not in qq.keys()) and ("samplingrate" not in qq.keys()):
+                if self.sampling_rate == -1.0:
+                    text, ok = QInputDialog.getText(self, 'Sampling rate',
+                                                          'Sampling rate [Hz] :')
+                    if ok:
+                        self.sampling_rate = float(text)
+                    else:
+                        return  # not able to continue with a sampling rate
+            else:
+                self.sampling_rate = qq.get("samplingRate",qq.get("samplingrate", 0.0))
+            template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
+            nstates = self.waveforms.shape[-1]
+            pidx = int(nstates/3)
+            if qq["mlseq"].shape[0] == self.waveforms.shape[0]:
+                uidx, tidx = np.where(qq["mlseq"][:] == pidx)
+            else:
+                tidx, uidx = np.where(qq["mlseq"][:] == pidx)
+            for (ii, tt) in enumerate(template_idx):
+                cname = "cell%02d" % (ii+1, )
+                cdir = self.basedir + os.path.sep + cname
+                if not os.path.isdir(cdir):
+                    os.mkdir(cdir)
+                iidx, = np.where(uidx == tt)
+                timestamps = tidx[iidx]*1000/self.sampling_rate
+                fname = cdir + os.path.sep + "spiketrain.mat"
+                mio.savemat(fname, {"timestamps": timestamps,
+                                    "spikeForm": self.waveforms[tt, :, :]})
 
     def select_waveforms(self, fname="spike_templates.hdf5"):
         files = glob.glob(fname)
@@ -115,7 +118,6 @@ class ViewWidget(QMainWindow):
                     dd = "."
                 self.basedir = dd
                 self.sortfile = dd + os.path.sep + "hmmsort.mat"
-                print self.sortfile
                 if not os.path.isfile(self.sortfile):
                     continue
                 with h5py.File(f, "r") as ff:
