@@ -16,6 +16,7 @@ args=
 while [ $# -gt 0 ]; do
   token=$1
   args="${args} \"${token}\"" 
+  shift
 done
 eval "\"${exe_dir}/hmm_decode.app/Contents/MacOS/hmm_decode\"" $args
 exit
