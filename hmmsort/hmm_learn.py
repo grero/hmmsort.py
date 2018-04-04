@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 """@package hmm_learn_tetrode
 This package contains a set of functions to learn spike templates from highpass
@@ -25,10 +26,10 @@ np.seterr(all='warn')
 #only raise an error if we are dividing by zero; this usually means we made a
 #mistake somewhere
 np.seterr(divide='raise')
-if os.path.isdir('/Volumes/Chimera/tmp'):
-    tempfile.tempdir = '/Volumes/Chimera/tmp'
-elif os.path.isdir('/Volumes/DataX/tmp'):
-    tempfile.tempdir = '/Volumes/DataX/tmp'
+#if os.path.isdir('/Volumes/Chimera/tmp'):
+#    tempfile.tempdir = '/Volumes/Chimera/tmp'
+#elif os.path.isdir('/Volumes/DataX/tmp'):
+#    tempfile.tempdir = '/Volumes/DataX/tmp'
 
 def gatherSpikeFormsFromGroup(group=1,sessionName=None,baseDir='hmmsort',globPattern=None):
     if globPattern == None:
@@ -513,8 +514,8 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
     """
     for i in xrange(N):
         W[:,1+(spklength-1)*i:(i+1)*(spklength-1)] = spkform[i,:,1:]
-   """
-    g = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
+   """ 
+    g = np.memmap(tempfile.NamedTemporaryFile(dir=tempPath,prefix=shortenCWD()),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
     #fit = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=(N*(spklength-1)+1,winlength),mode='w+')
     #this is an index vector
     q = np.concatenate(([N*(spklength-1)],np.arange(N*(spklength-1))),axis=0)
@@ -690,10 +691,10 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         #do this in chunks
         try:
             for i in xrange(nchunks):
-                print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks)
-                #create on file per chunk; don't delete since we'll need it when we
+                print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
+                #create one file per chunk; don't delete since we'll need it when we
                 #run the backward sweep
-                fid = tempfile.NamedTemporaryFile(dir=tempPath,delete=False)
+                fid = tempfile.NamedTemporaryFile(dir=tempPath,prefix=shortenCWD(),delete=False)
                 files[i] = fid.name
                 t1 = time.time()
                 for t in xrange(1,chunksizes[i]):
@@ -795,7 +796,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
             W = W / G[None,:]
             W[:,0] = 0
             p = np.zeros((N, ))
-            D = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=data.shape,mode='w+')
+            D = np.memmap(tempfile.NamedTemporaryFile(dir=tempPath,prefix=shortenCWD()),dtype=np.float,shape=data.shape,mode='w+')
             for i in xrange(nchunks):
                 fid = open(files[i],'r')
                 g = blosc.unpack_array(fid.read())
@@ -1170,6 +1171,20 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
 
     return np.array(new_spkform),np.array(pp),np.array(ind)
 
+def shortenCWD():
+    """
+    Creates a shortened name for the current working directory
+    """
+    cwd = os.getcwd()
+    # split into directory strings
+    cwdstrs = cwd.split(os.sep)
+    # get channel
+    chanstr = cwdstrs[-1]
+    arraystr = cwdstrs[-2]
+    sesstr = cwdstrs[-3]
+    daystr = cwdstrs[-4]
+    
+    return daystr + sesstr[-2:] + arraystr[-2:] + chanstr[-3:]
 
 if __name__ == '__main__':
 
@@ -1228,8 +1243,6 @@ if __name__ == '__main__':
                     outf = h5py.File(outFileName,'a')
                     outf.close()
             sys.exit(0)
-
-
 
         if states is not None:
             states = int(states)
