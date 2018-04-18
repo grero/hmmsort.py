@@ -273,7 +273,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     return spikeForms,cinv
 
 def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=3,
-                   saveToFile=False,redo=False,iterations=3,**kwargs):
+                   saveToFile=False,redo=False,iterations=3,spike_length=1.5, **kwargs):
     """
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -291,7 +291,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     states = kwargs.get('states')
     if states is None:
         #set the number of states corresponding to 1.5 ms
-        states = int(np.ceil(1.5*samplingRate/1000.))
+        states = int(np.ceil(spike_length*samplingRate/1000.))
         kwargs['states'] = states
     if splitp == None:
         #set the minimum firing rate at 0.5 Hz
