@@ -18,7 +18,6 @@ def level(cwd):
          # sessioneye is a valid session direcory
          # so we want to add 'eye' to the list of valid suffixes
          # that will be removed properly
-         numstr.append('eye')
          ll = pp.strip(''.join(numstr))
      return ll
         
