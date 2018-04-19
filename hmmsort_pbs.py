@@ -49,7 +49,7 @@ if __name__ == '__main__':
         fname_decode = "decode_job%.4d.pbs" %(i,)
         pp = f.split(os.sep)
         dd = os.sep.join([currentdir] +  pp[:-1])
-        if os.path.isfile(os.sep.join(dd, "hmmsort.mat")):
+        if os.path.isfile(os.sep.join([dd, "hmmsort.mat"])):
             continue  # skip this channel if it already contains sorted data
         fn = pp[-1]
         # change directories so that the output and error files will be created
