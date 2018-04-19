@@ -50,6 +50,8 @@ if __name__ == '__main__':
         fname_decode = "decode_job%.4d.pbs" %(i,)
         pp = f.split(os.sep)
         dd = os.sep.join([currentdir] +  pp[:-1])
+        if os.path.isfile(os.sep.join([dd, "hmmsort.mat"])):
+            continue  # skip this channel if it already contains sorted data
         fn = pp[-1]
         # change directories so that the output and error files will be created
         # in the respective channel directores and will be easier to check on
@@ -63,6 +65,7 @@ if __name__ == '__main__':
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
+	    fo.write("--min_snr 4.0 ")
             # get current username instead of hardcoding username
             fo.write("--max_size 1000000 --tempPath /hpctmp2/%s/tmp/\n" %(getpass.getuser()))
 
