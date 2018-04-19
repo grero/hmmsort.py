@@ -183,12 +183,14 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     nchunks = len(chunksizes)
     dtf = 0
     dtb = 0
+    # the channel directory is being used to create unique tempfile filenames
+    scwd = shortenCWD()
     for bw in xrange(iterations):
         print "Iteration %d of %d" % (bw + 1, 
                                      iterations)
         sys.stdout.flush()
         W = W.flatten()
-        fid = tempfile.TemporaryFile(dir=tempPath)
+        # fid = tempfile.TemporaryFile(dir=tempPath,prefix=scwd)
         files = ['']*nchunks
         p = p_reset
         g = np.zeros((N*(spklength-1)+1,chunksize))
@@ -207,7 +209,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
                 np.seterr(under='warn')
                 t1 = time.time()
-                fid = tempfile.NamedTemporaryFile(dir=tempPath,delete=False)
+                fid = tempfile.NamedTemporaryFile(dir=tempPath,delete=False,prefix=scwd)
                 files[i] = fid.name
                 try:
                     forward(data[chunks[i]:chunks[i+1]],W,g,spklength,chunksizes[i],cinv,
@@ -233,6 +235,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     #try saving the file
                     try:
                         fid.write(gp)
+                        fid.flush()
                         fid.close()
                     except ValueError:
                         """
@@ -287,6 +290,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 #rewind the file
                 fid = open(files[i],'w')
                 fid.write(gp)
+                fid.flush()
                 fid.close()
             
             #TODO: This stop could be quite memory intensive
@@ -305,7 +309,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             W = W / G
             W[0] = 0
             p = np.zeros((N, ))
-            D = np.memmap(tempfile.TemporaryFile(),dtype=np.float,shape=data.shape,mode='w+')
+            D = np.memmap(tempfile.TemporaryFile(prefix=scwd),dtype=np.float,shape=data.shape,mode='w+')
             t1 = time.time()
             print "Constructing D from file chunks..."
             for i in xrange(nchunks):
@@ -420,4 +424,19 @@ def getSessionName(path=None):
     elif 'sort' in parts[-1]:
         name = ''.join((parts[-4],filter(lambda s: s.isdigit(),parts[-2])))
     return name
+
+def shortenCWD():
+    """
+    Creates a shortened name for the current working directory
+    """
+    cwd = os.getcwd()
+    # split into directory strings
+    cwdstrs = cwd.split(os.sep)
+    # get channel
+    chanstr = cwdstrs[-1]
+    arraystr = cwdstrs[-2]
+    sesstr = cwdstrs[-3]
+    daystr = cwdstrs[-4]
+    
+    return daystr + sesstr[-2:] + arraystr[-2:] + chanstr[-3:]
 
