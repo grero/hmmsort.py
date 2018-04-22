@@ -17,7 +17,7 @@ stream_error = true
 log		=	$(sortdir)/hmmsort.log
 getenv  = true
 request_memory=6G
-request_disk = 20G
+request_disk = 30G
 RunAsOwner = false
 
 queue 1 

@@ -190,7 +190,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                                      iterations)
         sys.stdout.flush()
         W = W.flatten()
-        fid = tempfile.TemporaryFile(dir=tempPath,prefix=scwd)
+        # fid = tempfile.TemporaryFile(dir=tempPath,prefix=scwd)
         files = ['']*nchunks
         p = p_reset
         g = np.zeros((N*(spklength-1)+1,chunksize))
@@ -235,6 +235,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     #try saving the file
                     try:
                         fid.write(gp)
+                        fid.flush()
                         fid.close()
                     except ValueError:
                         """
@@ -289,6 +290,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 #rewind the file
                 fid = open(files[i],'w')
                 fid.write(gp)
+                fid.flush()
                 fid.close()
             
             #TODO: This stop could be quite memory intensive

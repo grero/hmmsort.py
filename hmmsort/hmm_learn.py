@@ -273,7 +273,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     return spikeForms,cinv
 
 def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=3,
-                   saveToFile=False,redo=False,iterations=3,**kwargs):
+                   saveToFile=False,redo=False,iterations=3,spike_length=1.5, **kwargs):
     """
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -291,7 +291,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     states = kwargs.get('states')
     if states is None:
         #set the number of states corresponding to 1.5 ms
-        states = int(np.ceil(1.5*samplingRate/1000.))
+        states = int(np.ceil(spike_length*samplingRate/1000.))
         kwargs['states'] = states
     if splitp == None:
         #set the minimum firing rate at 0.5 Hz
@@ -1200,13 +1200,14 @@ if __name__ == '__main__':
                                                             'reorder','iterations=',
                                                             'tempPath=',
                                                             'outputFile=',
-                                                            'initFile=','states=','initOnly', 'maxp=', 'min_snr='])
+                                                            'initFile=','states=','initOnly', 'maxp=', 'min_snr=',
+                                                            'states='])
 
         if len(sys.argv) == 1:
             #print help message and quit
             print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
-            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 4.0]
+            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 4.0] [--states 45]
             """
 
             sys.exit(0)
@@ -1223,7 +1224,7 @@ if __name__ == '__main__':
         debug = opts.has_key('--debug')
         redo = opts.has_key('--redo')
         reoder = opts.has_key('--reorder')
-        iterations = int(opts.get('--iterations',6))
+        iterations = int(opts.get('--iterations',3))
         tempPath = opts.get('--tempPath','/Volumes/Scratch')
         initFile = opts.get('--initFile')
         states = opts.get('--states')
