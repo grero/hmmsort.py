@@ -19,6 +19,24 @@ picked_lines = []
 scriptDir = os.path.dirname(os.path.realpath(__file__))
 
 
+class SaveFile():
+    def __init__(self, fname):
+        self.fname = fname
+        self.ishdf5 = False
+
+    def __enter__(self):
+        if h5py.is_hdf5(self.fname):
+            self.ishdf5 = True
+            self.ff = h5py.File(self.fname, "r")
+        else:
+            self.ff = mio.loadmat(self.fname)
+        return self.ff
+
+    def __exit__(self, type, value, traceback):
+        if self.ishdf5:
+            self.ff.close()
+
+
 class SimplerToolbar(NavigationToolbar):
     toolitems = [t for t in NavigationToolbar.toolitems if
                  t[0] in ("Home", "Pan", "Zoom")]
@@ -80,7 +98,7 @@ class ViewWidget(QMainWindow):
 
     def save_spiketrains(self):
         print "Saving spiketrains"
-        with h5py.File(self.sortfile, "r") as qq: 
+        with SaveFile(self.sortfile) as qq:
             if ("samplingRate" not in qq.keys()) and ("samplingrate" not in qq.keys()):
                 if self.sampling_rate == -1.0:
                     text, ok = QInputDialog.getText(self, 'Sampling rate',
