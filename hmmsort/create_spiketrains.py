@@ -110,7 +110,14 @@ class ViewWidget(QMainWindow):
                                     "spikeForm": self.waveforms[tt, :, :]})
 
     def select_waveforms(self, fname="spike_templates.hdf5"):
-        files = glob.glob(fname)
+        if not os.path.isfile(fname):
+            ff = os.path.join("hmmsort", fname)
+            if os.path.isfile(ff):
+                files = [ff]
+            else:
+                return
+        else:
+            files = [fname]
         if files:
             for f in files:
                 dd = os.path.dirname(f)
