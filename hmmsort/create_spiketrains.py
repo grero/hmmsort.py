@@ -151,7 +151,13 @@ class ViewWidget(QMainWindow):
                 self.basedir = dd
                 self.sortfile = dd + os.path.sep + "hmmsort.mat"
                 if not os.path.isfile(self.sortfile):
-                    continue
+                    if "hmmsort" in self.basedir:
+                        self.sortfile = self.sortfile.replace("hmmsort", "..")
+                    if not os.path.isfile(self.sortfile):
+                        msg = QMessageBox()
+                        msg.setIcon(QMessageBox.Critical)
+                        msg.setText("Sort file " + self.sortfile + " not found")
+                        msg.setWindowTitle("Error")
                 with h5py.File(f, "r") as ff:
                     self.waveforms = ff["spikeForms"][:]
                     pp = ff["p"][:]
