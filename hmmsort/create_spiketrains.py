@@ -195,7 +195,6 @@ def select_waveforms(fname="spike_templates.hdf5"):
             for f in files:
                 with h5py.File(f, "r") as ff:
                     waveforms = ff["spikeForms"][:]
-                    print waveforms.shape
                     pp = ff["p"][:]
                     plot_waveforms(waveforms, pp)
 
