@@ -118,7 +118,7 @@ class ViewWidget(QMainWindow):
                 tidx, uidx = np.where(qq["mlseq"][:] == pidx)
             for (ii, tt) in enumerate(template_idx):
                 cname = "cell%02d" % (ii+1, )
-                cdir = self.basedir + os.path.sep + cname
+                cdir = os.path.join(os.path.dirname(self.sortfile), cname)
                 if not os.path.isdir(cdir):
                     os.mkdir(cdir)
                 iidx, = np.where(uidx == tt)
@@ -151,12 +151,12 @@ class ViewWidget(QMainWindow):
                 self.sortfile = dd + os.path.sep + "hmmsort.mat"
                 if not os.path.isfile(self.sortfile):
                     if "hmmsort" in self.basedir:
-                        self.sortfile = self.sortfile.replace("hmmsort", "..")
-                    if not os.path.isfile(self.sortfile):
-                        msg = QMessageBox()
-                        msg.setIcon(QMessageBox.Critical)
-                        msg.setText("Sort file " + self.sortfile + " not found")
-                        msg.setWindowTitle("Error")
+                        self.sortfile = os.path.join(dd, "..", "hmmsort.mat")
+                if not os.path.isfile(self.sortfile):
+                    msg = QMessageBox()
+                    msg.setIcon(QMessageBox.Critical)
+                    msg.setText("Sort file " + self.sortfile + " not found")
+                    msg.setWindowTitle("Error")
                 with h5py.File(f, "r") as ff:
                     self.waveforms = ff["spikeForms"][:]
                     pp = ff["p"][:]
