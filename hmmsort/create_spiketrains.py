@@ -4,7 +4,7 @@ import scipy.io as mio
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QWidget,
-                             QVBoxLayout, QPushButton, QInputDialog)
+                             QVBoxLayout, QPushButton, QInputDialog, QMessageBox)
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
@@ -126,6 +126,12 @@ class ViewWidget(QMainWindow):
                 fname = cdir + os.path.sep + "spiketrain.mat"
                 mio.savemat(fname, {"timestamps": timestamps,
                                     "spikeForm": self.waveforms[tt, :, :]})
+
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("Spiketrains saved")
+            msg.setWindowTitle("Info")
+            retval = msg.exec_()
 
     def select_waveforms(self, fname="spike_templates.hdf5"):
         if not os.path.isfile(fname):
