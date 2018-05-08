@@ -33,7 +33,7 @@ class SaveFile():
         return self.ff
 
     def __exit__(self, type, value, traceback):
-        if self.ishdf5:
+        if self.ishdf5 and not self.ff.closed:
             self.ff.close()
 
 
