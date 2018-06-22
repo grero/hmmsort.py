@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!~/anaconda2/bin/python
 """@package hmm_learn
 This package contains a set of functions to learn spike templates from highpass
 data
