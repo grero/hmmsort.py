@@ -91,7 +91,7 @@ def readDescriptor(fname):
         typ.append(parts[1])
             
         status.append(parts[-1]=='Active')
-
+    lines.close()
     return {'num_channels': channels, 'sampling_rate':sampling_rate,'gain':
             gain,'ch_nr':np.array(ch_nr),'gr_nr':np.array(gr_nr),'channel_status':np.array(status),'channel_type':typ,
             'missing_channels': missing_channels}
@@ -162,5 +162,6 @@ def readNptData(fname):
                        dtype=dataTypes[datatype])
 
     data = data.reshape(npoints,num_channels).T
+    fid.close()
     return data
 
