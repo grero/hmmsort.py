@@ -41,31 +41,63 @@ if __name__ == '__main__':
     print_strs = 'Hello World'
     n = 10000
     # try_array = np.array([[1,2],[3,4]])
-    print_strs = ''.join(char*n for char in print_strs)
+    # print_strs = ''.join(char*n for char in print_strs)
 
     for bw in range(iteration):
         # sys.stdout.flush()
         # tempPath = '~/hpctmp2'
         # fid = tempfile.NamedTemporaryFile(dir=tempPath, delete=False, prefix=scwd)
-        fid = tempfile.NamedTemporaryFile(dir=tempPath, delete=False, prefix=scwd)
 
+        # create the temp file
+        kk = 0
+        while kk < 100:
+            try:
+                fid = tempfile.NamedTemporaryFile(dir=tempPath, delete=False, prefix=scwd)
+                print('file' + str(bw) + str(i) + 'is written')
+            except IOError:
+                kk += 1
+                time.sleep(np.random.random() * 30)
+                print("Could not create tempfile due to IOError. Retrying ... ")
+                sys.stdout.flush()
+            else:
+                print("Some error occurred while creating temp file...")
+                break
+        if kk == 100:
+            if __name__ == '__main__':
+                print("Could not create temporary file after 100 tries.")
+                sys.stdout.flush()
+                sys.exit(11)
+            else:
+                raise IOError('Could not create temporary file')
+
+
+
+        # write something in the file
         kk = 0
         while kk < 100:
             try:
                 for i in range(1,300):
                     #fid.write(bytes(print_strs, 'utf-8'))
-		    fid.write(print_strs)
+                    fid.write(print_strs)
                     time.sleep(1)
-                    print('file' + str(bw) + str(i) + 'is written...')
+                print('something has been written in file' + str(bw) + str(i))
             except ValueError:
                 kk += 1
-                time.sleep(10)
+                time.sleep(np.random.random() * 30)
+                print("Could not write in tempfile due to ValueError. Retrying ... ")
+                sys.stdout.flush()
             else:
+                print("Some error occurred while writing temp file...")
                 break
 
         if kk == 100:
-	    sys.exit(99)
-            print("Couldn't save the file...")
+            if __name__ == '__main__':
+                print("Could not write in temporary file after 100 tries.")
+                sys.stdout.flush()
+                sys.exit(22)
+            else:
+                raise IOError('Could not write in temporary file')
+
 
 
 

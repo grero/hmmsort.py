@@ -186,7 +186,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     # the channel directory is being used to create unique tempfile filenames
     scwd = shortenCWD()
     for bw in xrange(iterations):
-        print "Iteration %d of %d" % (bw + 1, 
+        print "Iteration %d of %d" % (bw + 1,
                                      iterations)
         sys.stdout.flush()
         W = W.flatten()
