@@ -8,7 +8,8 @@ import os
 # tempPath = os.path.join('C:','Users','a0126587','Desktop','tempfile')
 ps = os.sep
 
-tempPath = 'C:'+ps+'Users'+ps+'a0126587'+ps+'Desktop'+ps+'tempfile'
+# tempPath = 'C:'+ps+'Users'+ps+'a0126587'+ps+'Desktop'+ps+'tempfile'
+tempPath = ps+'home'+ps+'svu'+ps+'a0126587'+ps+'hpctmp2'+ps+'tmp'
 
 # f = tempfile.NamedTemporaryFile(dir=tempPath,delete=False)
 # f.write(b'Hello world!')
@@ -51,8 +52,9 @@ if __name__ == '__main__':
         kk = 0
         while kk < 100:
             try:
-                for i in range(1,10):
-                    fid.write(bytes(print_strs, 'utf-8'))
+                for i in range(1,300):
+                    #fid.write(bytes(print_strs, 'utf-8'))
+		    fid.write(print_strs)
                     time.sleep(1)
                     print('file' + str(bw) + str(i) + 'is written...')
             except ValueError:
@@ -62,6 +64,7 @@ if __name__ == '__main__':
                 break
 
         if kk == 100:
+	    sys.exit(99)
             print("Couldn't save the file...")
 
 
