@@ -222,7 +222,7 @@ class ViewWidget(QMainWindow):
                     self.waveforms = ff["spikeForms"][:]
                     pp = ff["p"][:]
                     self.plot_waveforms(self.waveforms, pp)
-
+                    ff.close()
 
 def plot_waveforms(waveforms, pp):
     fig = plt.figure()
@@ -257,6 +257,7 @@ def select_waveforms(fname="spike_templates.hdf5"):
                     waveforms = ff["spikeForms"][:]
                     pp = ff["p"][:]
                     plot_waveforms(waveforms, pp)
+                    ff.close()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
