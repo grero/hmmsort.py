@@ -31,7 +31,7 @@ class SaveFile():
         else:
             self.ff = mio.loadmat(self.fname)
         return self.ff
-
+    
     def __exit__(self, type, value, traceback):
         if self.ishdf5:
             try:
@@ -68,38 +68,70 @@ class ViewWidget(QMainWindow):
         self.navigation_toolbar = SimplerToolbar(self.figure_canvas, self,
                                                  coordinates=False)  # turn off coordinates
         self.navigation_toolbar.spiketrain_button.clicked.connect(self.save_spiketrains)
+
         layout.addWidget(self.navigation_toolbar, 0)
         layout.addWidget(self.figure_canvas, 10)
         self.figure = self.figure_canvas.figure
+        
         self.figure.canvas.mpl_connect('pick_event', self.pick_event)
+    
         ax = self.figure.add_subplot(111)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
         ax.set_xlabel("State")
         ax.set_ylabel("Amplitude")
 
+        self.key = []
+        self.merged_colors = []
+        self.merged_lines = []
         self.picked_lines = []
         self.sampling_rate = -1.0
+        self.counter = 0
+    
+    def addto_array(self, merged, new):
+        merged.extend(new[0])
+        return merged
 
     def pick_event(self, event):
+        ax = self.figure.axes[0]
         artist = event.artist
         lw = artist.get_linewidth()
         label = artist.get_label()
-        if lw == 1.5:
+        if not artist.get_color() == "gray":
+            self.color = artist.get_color()
+
+        if lw == 1.5: # detect waveforms to save spiketrains
             artist.set_linewidth(2*lw)
             self.picked_lines.append(label)
         elif lw > 1.5:
             artist.set_linewidth(lw/2)
             self.picked_lines.remove(label)
+        
+        self.key = QApplication.keyboardModifiers()
+        if (self.key == Qt.ShiftModifier) and (lw == 1.5) : # detect waveforms to merge
+            artist.set_color("gray")
+            self.merged_lines.append(label)
+            self.merged_colors.append(self.color)
+        elif (self.key == Qt.ShiftModifier) and (lw > 1.5):
+            index = self.merged_lines.index(label)
+            artist.set_color(self.merged_colors[index])
+            self.merged_lines.remove(label)
+            self.merged_colors.remove(self.merged_colors[index])
+
+        print "Save individual spiketrains for waveforms: ", self.picked_lines
+        print "Save merged spiketrains for waveforms: ", self.merged_lines
         artist.figure.canvas.draw()
 
     def plot_waveforms(self, waveforms, pp):
         ax = self.figure.axes[0]
         for i in xrange(waveforms.shape[0]):
-            ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
+            p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
         ax.legend()
 
     def save_spiketrains(self):
+        tot_timestamps = []
+        num_timestamps = []
+        merge_timestamps = [] # for all merged waveforms
         print "Saving spiketrains"
         with SaveFile(self.sortfile) as qq:
             if ("samplingRate" not in qq.keys()) and ("samplingrate" not in qq.keys()):
@@ -113,6 +145,7 @@ class ViewWidget(QMainWindow):
             else:
                 self.sampling_rate = qq.get("samplingRate",qq.get("samplingrate", 0.0))
             template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
+            merge_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.merged_lines]
             nstates = self.waveforms.shape[-1]
             pidx = int(nstates/3)
             if qq["mlseq"].shape[0] == self.waveforms.shape[0]:
@@ -120,15 +153,40 @@ class ViewWidget(QMainWindow):
             else:
                 tidx, uidx = np.where(qq["mlseq"][:] == pidx)
             for (ii, tt) in enumerate(template_idx):
-                cname = "cell%02d" % (ii+1, )
-                cdir = os.path.join(os.path.dirname(self.sortfile), cname)
-                if not os.path.isdir(cdir):
-                    os.mkdir(cdir)
                 iidx, = np.where(uidx == tt)
-                timestamps = tidx[iidx]*1000/self.sampling_rate
-                fname = cdir + os.path.sep + "spiketrain.mat"
-                mio.savemat(fname, {"timestamps": timestamps,
-                                    "spikeForm": self.waveforms[tt, :, :]})
+                tot_timestamps.append(tidx[iidx]*1000/self.sampling_rate)
+            saveind_idx = list(set(template_idx) - set(merge_idx)) # only waveforms to save individually
+            
+            if merge_idx:
+            	for i in merge_idx:
+            		idx = merge_idx.index(i)
+            		merge_timestamps = self.addto_array(merge_timestamps, tot_timestamps[idx])
+
+            	merge_timestamps = list(set(merge_timestamps))
+            	merge_timestamps.sort()
+
+            	merge_waveforms = np.mean(self.waveforms[merge_idx,:,:], axis = 0)
+            	cname = "cell%02d" % (self.counter+1, )
+            	cdir = os.path.join(os.path.dirname(self.sortfile), cname)
+            	if not os.path.isdir(cdir):
+            	    os.mkdir(cdir)
+            	fname = cdir + os.path.sep + "spiketrain.mat"
+            	mio.savemat(fname, {"timestamps": merge_timestamps,
+                                    "spikeForm": merge_waveforms})
+            	self.counter += 1
+
+            if saveind_idx:
+            	for i in saveind_idx:
+            		idx = template_idx.index(i)
+                	timestamps = tot_timestamps[idx][0].tolist()
+                	cname = "cell%02d" % (self.counter+1, )
+                	cdir = os.path.join(os.path.dirname(self.sortfile), cname)
+                	if not os.path.isdir(cdir):
+                		os.mkdir(cdir)
+                	fname = cdir + os.path.sep + "spiketrain.mat"
+                	mio.savemat(fname, {"timestamps": timestamps,
+                                    	"spikeForm": self.waveforms[i, :, :]})
+                	self.counter += 1
 
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
@@ -177,8 +235,7 @@ def plot_waveforms(waveforms, pp):
         ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
     plt.legend()
     fig.canvas.mpl_connect('pick_event', pick_event)
-
-
+    
 def pick_event(event):
     artist = event.artist
     lw = artist.get_linewidth()
