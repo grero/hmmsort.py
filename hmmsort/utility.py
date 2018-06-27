@@ -207,9 +207,27 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             sys.stdout.flush()
             for i in xrange(nchunks):
                 print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
+                sys.stdout.flush()
                 np.seterr(under='warn')
                 t1 = time.time()
-                fid = tempfile.NamedTemporaryFile(dir=tempPath,delete=False,prefix=scwd)
+                kk = 0
+                while kk < 100:
+                    try:
+                        fid = tempfile.NamedTemporaryFile(dir=tempPath,delete=False,prefix=scwd)
+                    except IOError:
+                        kk += 1
+                        time.sleep(np.random.random()*30)
+                        print """Could not create tempfile. Retrying ... """
+                        sys.stdout.flush()
+                    else:
+                        break
+                if kk == 100:
+                    if __name__ == '__main__':
+                        print"""Could not create temporary file after 100 tries."""
+                        sys.stdout.flush()
+                        sys.exit(11)
+                    else:
+                        raise IOError('Could not create temporary file')
                 files[i] = fid.name
                 try:
                     forward(data[chunks[i]:chunks[i+1]],W,g,spklength,chunksizes[i],cinv,
@@ -227,6 +245,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 dtf = (dtf*i + (t2 - t1))/(i + 1)
                 print "That took %.2f seconds. ETTG: %.2f" %(t2-t1,
                                                              dtf*(nchunks-(i + 1)))
+                sys.stdout.flush()
                 g = g[:, :chunksizes[i]]
                 gp = blosc.pack_array(g)
                 packed_chunksizes[i] = len(gp)
@@ -237,14 +256,16 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         fid.write(gp)
                         fid.flush()
                         fid.close()
-                    except ValueError:
+                    except (ValueError, IOError):
                         """
                         for some reason, sometimes we get a value error here. If that
                         happens, just report the exception and let sge know an error
                         occured
                         """
+                        print """Could not write to file. Retrying ... """
+                        sys.stdout.flush()
                         kk += 1
-                        time.sleep(10)
+                        time.sleep(np.random.random()*30)
                     else:
                         #if no exception occurred, we mangaed to save the file, so
                         #break out of the loop
@@ -258,6 +279,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     if __name__ == '__main__':
                         print """Could not save temporary file, most likely because of
                         lack of disk space"""
+                        sys.stdout.flush()
                         sys.exit(99)
                     else:
                         #raise an IO error
@@ -270,6 +292,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             G = np.zeros((g.shape[0], )) 
             for i in xrange(nchunks - 1, -1, -1):
                 print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks) 
+                sys.stdout.flush()
                 t1 = time.time()
                 fid = open(files[i],'r')
                 g = blosc.unpack_array(fid.read(packed_chunksizes[i]))
@@ -281,6 +304,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 dtb = (dtb*i + (t2 - t1))/(i + 1)
                 print "That took %.2f seconds. ETTG: %.2f" %(t2-t1,
                                                              dtb*(i))
+                sys.stdout.flush()
                 np.seterr(under='warn')
                 g = g / (g.sum(0) + tiny)
                 G += g.sum(1)
@@ -288,16 +312,67 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 #update the block size
                 packed_chunksizes[i] = len(gp)
                 #rewind the file
-                fid = open(files[i],'w')
-                fid.write(gp)
-                fid.flush()
-                fid.close()
+                kk = 0
+                while kk < 100:
+                    try:
+                        fid = open(files[i],'w')
+                    except IOError:
+                        kk += 1
+                        time.sleep(np.random.random()*30)
+                        print """Could not open tempfile. Retrying ... """
+                        sys.stdout.flush()
+                    else:
+                        break
+                if kk == 100:
+                    if __name__ == '__main__':
+                        print"""Could not open temporary file after 100 tries."""
+                        sys.stdout.flush()
+                        sys.exit(11)
+                    else:
+                        raise IOError('Could not open temporary file')
+
+                kk = 0
+                while kk < 100:
+                    #try saving the file
+                    try:
+                        fid.write(gp)
+                        fid.flush()
+                        fid.close()
+                    except (ValueError, IOError):
+                        """
+                        for some reason, sometimes we get a value error here. If that
+                        happens, just report the exception and let sge know an error
+                        occured
+                        """
+                        print """Could not write to file. Retrying ... """
+                        sys.stdout.flush()
+                        kk += 1
+                        time.sleep(np.random.random()*30)
+                    else:
+                        #if no exception occurred, we mangaed to save the file, so
+                        #break out of the loop
+                        break
+                        #traceback.print_exc(file=sys.stdout)
+                        #if __name__ == '__main__':
+                            #only exit if we are running this as a script
+                       #     sys.exit(99)
+                if kk == 100:
+                    #if we reach here it means that we could not save the file
+                    if __name__ == '__main__':
+                        print """Could not save temporary file, most likely because of
+                        lack of disk space"""
+                        sys.stdout.flush()
+                        sys.exit(99)
+                    else:
+                        #raise an IO error
+                        raise IOError('Could not save temporary file')
             
             #TODO: This stop could be quite memory intensive
             np.seterr(under='warn')
             W = np.zeros(W.shape)
             t1 = time.time()
             print "Constructing from file chunks..."
+            sys.stdout.flush()
             for i in xrange(nchunks):
                 fid = open(files[i],'r')
                 g = blosc.unpack_array(fid.read())
@@ -306,12 +381,14 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 W += np.dot(g,data[chunks[i]:chunks[i+1], 0]).flatten()
             t2 = time.time()
             print "Constructing W tok %.2f seconds" % (t2 - t1, )
+            sys.stdout.flush()
             W = W / G
             W[0] = 0
             p = np.zeros((N, ))
             D = np.memmap(tempfile.TemporaryFile(prefix=scwd),dtype=np.float,shape=data.shape,mode='w+')
             t1 = time.time()
             print "Constructing D from file chunks..."
+            sys.stdout.flush()
             for i in xrange(nchunks):
                 fid = open(files[i],'r')
                 g = blosc.unpack_array(fid.read())
@@ -324,6 +401,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     pass
             t2 = time.time()
             print "Constructing D tok %.2f seconds" % (t2 - t1, )
+            sys.stdout.flush()
         finally:
             for f in files:
                 if os.path.isfile(f):
@@ -351,6 +429,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             #remove templates with too low firing rate and replace with a new
             #guess
             print "\tTrying to split clusters..."
+            sys.stdout.flush()
             for i in xrange(len(spkform)):
                 if p[i] < splitp:
                     #remove template i and replace with template j
