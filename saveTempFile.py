@@ -34,7 +34,7 @@ def shortenCWD():
 
 if __name__ == '__main__':
 
-    iteration = 10
+    iteration = 1
 
     scwd = shortenCWD()
     size = 100000
@@ -53,7 +53,8 @@ if __name__ == '__main__':
         while kk < 100:
             try:
                 fid = tempfile.NamedTemporaryFile(dir=tempPath, delete=False, prefix=scwd)
-                print('file' + str(bw) + str(i) + 'is written')
+                print('file' + str(bw) + str(kk) + 'is written')
+		break
             except IOError:
                 kk += 1
                 time.sleep(np.random.random() * 30)
@@ -78,9 +79,10 @@ if __name__ == '__main__':
             try:
                 for i in range(1,300):
                     #fid.write(bytes(print_strs, 'utf-8'))
-                    fid.write(print_strs)
+                    fid.write(str(i))
                     time.sleep(1)
                 print('something has been written in file' + str(bw) + str(i))
+		break
             except ValueError:
                 kk += 1
                 time.sleep(np.random.random() * 30)
