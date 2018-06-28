@@ -1,10 +1,9 @@
 #!/bin/bash
 
 #PBS -l nodes=1:ppn=1
-#PBS -j oe
 #PBS -N testingSavingTempFile
 
 cd "$PBS_O_WORKDIR"
 
-python saveTempFile.py
+python ~/hmmsort/saveTempFile.py
 

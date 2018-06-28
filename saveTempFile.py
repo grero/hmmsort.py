@@ -5,6 +5,8 @@ import tempfile
 import time
 import os
 
+print('Processing...')
+
 # tempPath = os.path.join('C:','Users','a0126587','Desktop','tempfile')
 ps = os.sep
 
@@ -39,9 +41,9 @@ if __name__ == '__main__':
     scwd = shortenCWD()
     size = 100000
     print_strs = 'Hello World'
-    n = 10000
+    n = 1000000
     # try_array = np.array([[1,2],[3,4]])
-    # print_strs = ''.join(char*n for char in print_strs)
+    print_strs = ''.join(char*n for char in print_strs)
 
     for bw in range(iteration):
         # sys.stdout.flush()
@@ -79,7 +81,8 @@ if __name__ == '__main__':
             try:
                 for i in range(1,300):
                     #fid.write(bytes(print_strs, 'utf-8'))
-                    fid.write(str(i))
+                    #fid.write(str(i))
+		    fid.write(print_strs)
                     time.sleep(1)
                 print('something has been written in file' + str(bw) + str(i))
 		break
