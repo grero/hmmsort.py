@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!~/anaconda2/bin/python
 """@package hmm_learn
 This package contains a set of functions to learn spike templates from highpass
 data
@@ -744,7 +744,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                     if __name__ == '__main__':
                         print """Could not save temporary file, most likely because of
                         lack of disk space"""
-                        sys.exit(i+55)
+                        sys.exit(99)
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
@@ -1440,7 +1440,7 @@ if __name__ == '__main__':
             except IOError:
                 print "Could not read/write to file"
                 traceback.print_exc(file=sys.stdout)
-                sys.exit(66)
+                sys.exit(99)
     except SystemExit as ee:
         # honour the request to quit by simply re-issuing the call to exit with the correct code
         sys.exit(ee.code)
