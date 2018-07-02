@@ -212,7 +212,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
 
     if version == 1:
 
-    print "Version 1 is chosen..."
+    	print "Version 1 is chosen..."
 
         #compute the covariance matrix of the full data
         cinv = np.linalg.pinv(np.cov(cdata.T))
@@ -248,7 +248,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0], maxp=maxp)
     else:
 
-    print "Version other than 1 is chosen..."
+    	print "Version other than 1 is chosen..."
 
         if save:
             outf.close()
