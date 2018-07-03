@@ -122,10 +122,10 @@ class ViewWidget(QMainWindow):
         print "Save merged spiketrains for waveforms: ", self.merged_lines
         artist.figure.canvas.draw()
 
-    def plot_waveforms(self, waveforms, pp):
+    def plot_waveforms(self, waveforms):
         ax = self.figure.axes[0]
-        for i in xrange(waveforms.shape[0]):
-            p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
+        for i in xrange(waveforms.shape[2]):
+            p = ax.plot(waveforms[:, 0, i], label="Waveform %d" % (i, ), picker=5)
         ax.legend()
 
     def save_spiketrains(self):
@@ -194,7 +194,7 @@ class ViewWidget(QMainWindow):
             msg.setWindowTitle("Info")
             retval = msg.exec_()
 
-    def select_waveforms(self, fname="spike_templates.hdf5"):
+    def select_waveforms(self, fname="hmmsort.mat"):
         if not os.path.isfile(fname):
             ff = os.path.join("hmmsort", fname)
             if os.path.isfile(ff):
@@ -220,11 +220,10 @@ class ViewWidget(QMainWindow):
                     msg.setWindowTitle("Error")
                 with h5py.File(f, "r") as ff:
                     self.waveforms = ff["spikeForms"][:]
-                    pp = ff["p"][:]
-                    self.plot_waveforms(self.waveforms, pp)
+                    self.plot_waveforms(self.waveforms)
                     ff.close()
 
-def plot_waveforms(waveforms, pp):
+def plot_waveforms(waveforms):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.spines["top"].set_visible(False)
