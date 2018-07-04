@@ -201,7 +201,6 @@ class ViewWidget(QMainWindow):
                         self.waveforms = np.transpose(self.waveforms)
                     mio.savemat(fname, {"timestamps": timestamps,
                                     "spikeForm": self.waveforms[i, :, :]})
-                    print "waveform after save", self.waveforms
                     self.counter += 1
 
             msg = QMessageBox()
