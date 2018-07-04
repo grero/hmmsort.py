@@ -189,17 +189,20 @@ class ViewWidget(QMainWindow):
             	self.counter += 1
 
             if saveind_idx:
-            	for i in saveind_idx:
-            		idx = template_idx.index(i)
-                	timestamps = tot_timestamps[idx][0].tolist()
-                	cname = "cell%02d" % (self.counter+1, )
-                	cdir = os.path.join(os.path.dirname(self.sortfile), cname)
-                	if not os.path.isdir(cdir):
-                		os.mkdir(cdir)
-                	fname = cdir + os.path.sep + "spiketrain.mat"
-                	mio.savemat(fname, {"timestamps": timestamps,
-                                    	"spikeForm": self.waveforms[i, :, :]})
-                	self.counter += 1
+                for i in saveind_idx:
+                    idx = template_idx.index(i)
+                    timestamps = tot_timestamps[idx][0].tolist()
+                    cname = "cell%02d" % (self.counter+1, )
+                    cdir = os.path.join(os.path.dirname(self.sortfile), cname)
+                    if not os.path.isdir(cdir):
+                        os.mkdir(cdir)
+                    fname = cdir + os.path.sep + "spiketrain.mat"
+                    if self.ishdf5 == True:
+                        self.waveforms = np.transpose(self.waveforms)
+                    mio.savemat(fname, {"timestamps": timestamps,
+                                    "spikeForm": self.waveforms[i, :, :]})
+                    print "waveform after save", self.waveforms
+                    self.counter += 1
 
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
