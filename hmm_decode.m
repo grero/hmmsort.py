@@ -352,9 +352,9 @@ try
 				spikeForms = shiftdim(spikeForms,-1);
 				spikeForms = permute(spikeForms,[2,1,3]);
 			end
-			save(fname,'mlseq','spikeForms','ll', 'samplingRate','-v7.3');
+			save(fname,'mlseq','spikeForms','ll', 'samplingRate','cinv', '-v7.3');
 		else
-		  save([Args.fileName '.mat'],'mlseq','ll','-append','-v7.3');
+		  save([Args.fileName '.mat'],'mlseq','ll','cinv', '-append','-v7.3');
 			fname = [Args.fileName '.mat'];
 		end
 		if length(Args.Channels)>0
