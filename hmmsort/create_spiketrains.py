@@ -1,5 +1,6 @@
 import sys
 import os
+import math
 import scipy.io as mio
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -122,10 +123,22 @@ class ViewWidget(QMainWindow):
         print "Save merged spiketrains for waveforms: ", self.merged_lines
         artist.figure.canvas.draw()
 
-    def plot_waveforms(self, waveforms, pp):
+    def plot_waveforms(self, waveforms):
         ax = self.figure.axes[0]
-        for i in xrange(waveforms.shape[0]):
-            p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
+        sd = 4
+        noise = sd*math.sqrt(1/self.cinv) # calculates standard deviation
+        if (self.ishdf5 == True):
+            print "this is hdf5"
+            for i in xrange(waveforms.shape[2]):
+                ax.axhline(y=noise, color='k')
+                ax.axhline(y=-noise, color='k')
+                p = ax.plot(waveforms[:, 0, i], label="Waveform %d" % (i, ), picker=5)
+        else:
+            print "this is not hdf5"
+            for i in xrange(waveforms.shape[0]):
+                ax.axhline(y=noise, color='k')
+                ax.axhline(y=-noise, color='k')
+                p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
         ax.legend()
 
     def save_spiketrains(self):
@@ -194,7 +207,7 @@ class ViewWidget(QMainWindow):
             msg.setWindowTitle("Info")
             retval = msg.exec_()
 
-    def select_waveforms(self, fname="spike_templates.hdf5"):
+    def select_waveforms(self, fname="hmmsort.mat", cinv_fname = "spike_templates.hdf5"):
         if not os.path.isfile(fname):
             ff = os.path.join("hmmsort", fname)
             if os.path.isfile(ff):
@@ -218,13 +231,24 @@ class ViewWidget(QMainWindow):
                     msg.setIcon(QMessageBox.Critical)
                     msg.setText("Sort file " + self.sortfile + " not found")
                     msg.setWindowTitle("Error")
-                with h5py.File(f, "r") as ff:
+                if h5py.is_hdf5(f):
+                    self.ishdf5 = True
+                    ff = h5py.File(f, "r")
                     self.waveforms = ff["spikeForms"][:]
-                    pp = ff["p"][:]
-                    self.plot_waveforms(self.waveforms, pp)
                     ff.close()
+                else:
+                    self.ishdf5 = False
+                    ff = mio.loadmat(f)
+                    self.waveforms = ff["spikeForms"]
+        cwd = os.getcwd()
+        os.chdir("hmmsort")
+        cinv_file = h5py.File(cinv_fname, "r")
+        self.cinv = cinv_file["cinv"][:]
+        cinv_file.close()
+        os.chdir(cwd)
+        self.plot_waveforms(self.waveforms)
 
-def plot_waveforms(waveforms, pp):
+def plot_waveforms(waveforms):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.spines["top"].set_visible(False)
