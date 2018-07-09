@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!~/anaconda2/bin/python
 """@package hmm_learn
 This package contains a set of functions to learn spike templates from highpass
 data
@@ -273,7 +273,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     return spikeForms,cinv
 
 def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=3,
-                   saveToFile=False,redo=False,iterations=3,spike_length=1.5, **kwargs):
+                   saveToFile=False,redo=False,iterations=3,spike_length=1.5, maxp=12.0, **kwargs):
     """
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
