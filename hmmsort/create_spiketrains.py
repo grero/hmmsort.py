@@ -157,6 +157,7 @@ class ViewWidget(QMainWindow):
                         return  # not able to continue with a sampling rate
             else:
                 self.sampling_rate = qq.get("samplingRate",qq.get("samplingrate", 0.0))
+            self.sampling_rate = self.sampling_rate*1.0  # convert to float
             template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
             merge_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.merged_lines]
             nstates = self.waveforms.shape[-1]
