@@ -137,15 +137,15 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     """
     This function runs the baum-welch algorithm on the specified data, learning spiking templates. The input data should have dimensions of datapts X channels. This code runs on the data in chunks, offloading data to disk when not in use. This allows it to analyse arbitrarily long sequences of data.
     """
-    prestates = states/3
-    poststates = states/3
+    prestates = 0
+    poststates = 0
     levels = data.shape[1]
     if np.all(spkform == None):
         neurons = 8
         amp = np.random.random(size=(neurons,levels))+0.5
         #amp = amp/amp.max(1)[:, None]
         spkform = np.concatenate((np.zeros((levels, prestates)),
-                                  np.sin(np.linspace(0,3*np.pi,prestates))[None,:].repeat(levels,0),
+                                  np.sin(np.linspace(0,3*np.pi,states - prestates-poststates))[None,:].repeat(levels,0),
                                   np.zeros((levels,poststates))),axis=1)[None,:,:]*amp[:,:,None]*(np.median(np.abs(data),axis=0)/0.6745)[None,:,None]
     else:
         neurons,levels,spklength = spkform.shape
@@ -225,7 +225,11 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     if __name__ == '__main__':
                         print"""Could not create temporary file after 100 tries."""
                         sys.stdout.flush()
+<<<<<<< Updated upstream
                         sys.exit(bw+11)
+=======
+                        sys.exit(11)
+>>>>>>> Stashed changes
                     else:
                         raise IOError('Could not create temporary file')
                 files[i] = fid.name
@@ -280,7 +284,11 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         print """Could not save temporary file, most likely because of
                         lack of disk space"""
                         sys.stdout.flush()
+<<<<<<< Updated upstream
                         sys.exit(bw+22)
+=======
+                        sys.exit(99)
+>>>>>>> Stashed changes
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
@@ -327,7 +335,11 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     if __name__ == '__main__':
                         print"""Could not open temporary file after 100 tries."""
                         sys.stdout.flush()
+<<<<<<< Updated upstream
                         sys.exit(bw+33)
+=======
+                        sys.exit(11)
+>>>>>>> Stashed changes
                     else:
                         raise IOError('Could not open temporary file')
 
@@ -362,7 +374,11 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         print """Could not save temporary file, most likely because of
                         lack of disk space"""
                         sys.stdout.flush()
+<<<<<<< Updated upstream
                         sys.exit(bw+44)
+=======
+                        sys.exit(99)
+>>>>>>> Stashed changes
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
