@@ -60,9 +60,9 @@ if __name__ == '__main__':
         with open(fname_learn,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
-            #fo.write("#PBS -l walltime=24:00:00\n")
-            fo.write("#PBS -l mem=20GB\n")
-	    fo.write("#PBS -q matlab\n")
+            fo.write("#PBS -l walltime=24:00:00\n")
+            fo.write("#PBS -l mem=10GB\n")
+	    fo.write("#PBS -q short\n")
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
@@ -74,10 +74,10 @@ if __name__ == '__main__':
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
 
         with open(fname_decode,"w") as fo:
-            fo.write("#PBS -l nodes=1:ppn=1:mem=20GB\n")
+            fo.write("#PBS -l nodes=1:ppn=1\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
-            #fo.write("#PBS -l walltime=24:00:00\n")
-            fo.write("#PBS -q matlab\n")
+            #fo.write("#PBS -l walltime=48:00:00\n")
+            fo.write("#PBS -q serial\n")
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
             fo.write("cd %s\n" %(dd,))
@@ -86,5 +86,5 @@ if __name__ == '__main__':
             fo.write("SaveFile hmmsort.mat\n")
 
         if not "--dry-run" in dopts.keys():
-             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
+            jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
     sys.exit(0)
