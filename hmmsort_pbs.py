@@ -60,8 +60,8 @@ if __name__ == '__main__':
         with open(fname_learn,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
-            fo.write("#PBS -l walltime=24:00:00\n")
-            fo.write("#PBS -l mem=6GB\n")
+            #fo.write("#PBS -l walltime=24:00:00\n")
+            fo.write("#PBS -l mem=20GB\n")
 	    fo.write("#PBS -q matlab\n")
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
@@ -74,9 +74,9 @@ if __name__ == '__main__':
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
 
         with open(fname_decode,"w") as fo:
-            fo.write("#PBS -l nodes=1:ppn=1\n")
+            fo.write("#PBS -l nodes=1:ppn=1:mem=20GB\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
-            fo.write("#PBS -l walltime=24:00:00\n")
+            #fo.write("#PBS -l walltime=24:00:00\n")
             fo.write("#PBS -q matlab\n")
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
