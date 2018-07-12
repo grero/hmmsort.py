@@ -133,7 +133,7 @@ def backward2(data, W, g, spklength,
         g[:, t] = g[:, t] * b + tiny
 
 def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,
-                chunksize=10000,debug=False,levels=None,tempPath=None,**kwargs):
+                chunksize=10000,debug=False,levels=None,tempPath=None, rseed=None, **kwargs):
     """
     This function runs the baum-welch algorithm on the specified data, learning spiking templates. The input data should have dimensions of datapts X channels. This code runs on the data in chunks, offloading data to disk when not in use. This allows it to analyse arbitrarily long sequences of data.
     """
@@ -142,6 +142,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     levels = data.shape[1]
     if np.all(spkform == None):
         neurons = 8
+        if rseed is not None:
+            np.random.seed(rseed)
         amp = np.random.random(size=(neurons,levels))+0.5
         #amp = amp/amp.max(1)[:, None]
         spkform = np.concatenate((np.zeros((levels, prestates)),
