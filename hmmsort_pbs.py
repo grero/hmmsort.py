@@ -1,4 +1,5 @@
 #!/usr/bin/env python2.7
+
 import sys
 import os
 import glob
@@ -74,7 +75,13 @@ if __name__ == '__main__':
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
 
         with open(fname_decode,"w") as fo:
-            fo.write("#PBS -l nodes=1:ppn=1\n")
+             # request more memory as some decode jobs were being killed for 
+             # exceeding the default 4 GB
+            fo.write("#PBS -l mem=10GB\n")
+            # commenting out next line as it does not seem necessary
+            # and because I would like to keep the jobid for hmm_learn on the 
+            # 3rd line since some scripts are expecting that
+            # fo.write("#PBS -l nodes=1:ppn=1\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
             #fo.write("#PBS -l walltime=48:00:00\n")
             fo.write("#PBS -q serial\n")
@@ -83,7 +90,7 @@ if __name__ == '__main__':
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile %s Group 1 " %(execroot,fn))
             fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5 ")
-            fo.write("SaveFile hmmsort.mat\n")
+            fo.write("SaveFile hmmsort.mat hdf5path after_noise\n")
 
         if not "--dry-run" in dopts.keys():
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
