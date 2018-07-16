@@ -49,6 +49,7 @@ if __name__ == '__main__':
     for i,f in enumerate(files):
         fname_learn = "learn_job%.4d.pbs" %(i,)
         fname_decode = "decode_job%.4d.pbs" %(i,)
+        fname_transfer = "transfer_job%.4d.pbs" %(i,)
         pp = f.split(os.sep)
         dd = os.sep.join([currentdir] +  pp[:-1])
         if os.path.isfile(os.sep.join([dd, "hmmsort.mat"])):
@@ -94,4 +95,25 @@ if __name__ == '__main__':
 
         if not "--dry-run" in dopts.keys():
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
+
+        with open(fname_transfer, "w") as fo:
+            # request more memory as some decode jobs were being killed for
+            # exceeding the default 4 GB
+            fo.write("#PBS -l mem=10GB\n")
+            # commenting out next line as it does not seem necessary
+            # and because I would like to keep the jobid for hmm_learn on the
+            # 3rd line since some scripts are expecting that
+            # fo.write("#PBS -l nodes=1:ppn=1\n")
+            # increased request for CPU hours to make sure even long jobs will be able to complete
+            # fo.write("#PBS -l walltime=48:00:00\n")
+            fo.write("#PBS -q short\n")
+            if not "--dry-run" in dopts.keys():
+                fo.write("#PBS -W depend=afterok:%s\n" % (jobid,))
+            fo.write("cd %s\n" % (dd,))
+            fo.write("%s/transfer_data.sh" % (execroot))
+
+        if not "--dry-run" in dopts.keys():
+            jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_transfer]).strip()
+
+
     sys.exit(0)
