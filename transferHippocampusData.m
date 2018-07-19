@@ -20,6 +20,8 @@ system(['scp -P 8398 testTarTar.tar.gz hippocampus@cortex.nus.edu.sg:',targetDir
 
 system('ssh -p 8398 hippocampus@cortex.nus.edu.sg');
 
+system(['mkdir -p ', targetDir]);
+
 cd(targetDir)
 
 system('tar -xzf data.tar.gz');
