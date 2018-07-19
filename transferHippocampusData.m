@@ -9,7 +9,7 @@ cwd = pwd;
 indexStarting = strfind(cwd,'2018');
 
 picassoDir = fullfile(filesep,'volume1','Hippocampus','Data','picasso');
-dayStr = cwd([indexStarting:indexStarting+7,'temp']);
+dayStr = [cwd(indexStarting:indexStarting+7),'temp'];
 targetDir = fullfile(picassoDir, dayStr);
 
 cd ..
