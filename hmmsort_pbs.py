@@ -64,11 +64,11 @@ if __name__ == '__main__':
             # increased request for CPU hours to make sure even long jobs will be able to complete
             fo.write("#PBS -l walltime=24:00:00\n")
             fo.write("#PBS -l mem=10GB\n")
-	    fo.write("#PBS -q short\n")
+            fo.write("#PBS -q short\n")
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
-	    fo.write("--min_snr 4.0 ")
+            fo.write("--min_snr 4.0 ")
             # get current username instead of hardcoding username
             fo.write("--max_size 1000000 --tempPath /hpctmp2/%s/tmp/\n" %(getpass.getuser()))
 
@@ -110,7 +110,9 @@ if __name__ == '__main__':
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" % (jobid,))
             fo.write("cd %s\n" % (dd,))
-            fo.write("%s/transfer_data.sh" % (execroot))
+            fo.write("cp %s/transferHippocampusData.m\n" % (execroot))
+            fo.write("matlab2016a2 -nojvm -nodisplay -nosplash -r transferHippocampusData\n")
+            fo.write("rm transferHippocampusData.m\n")
 
         if not "--dry-run" in dopts.keys():
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_transfer]).strip()
