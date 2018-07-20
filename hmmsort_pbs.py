@@ -73,7 +73,21 @@ if __name__ == '__main__':
             fo.write("--max_size 1000000 --tempPath /hpctmp2/%s/tmp/\n" %(getpass.getuser()))
 
         if not "--dry-run" in dopts.keys():
-            jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
+            check = 0
+            flag = 0
+            while check <= 5:
+                try:
+                    jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
+                    flag = 1
+                    break
+                except:
+                    time.sleep(5)
+                    check += 1
+
+            if flag == 0:
+                print "%s is not successfully submitted onto PBS queue" %(fname_learn)
+
+
 
         with open(fname_decode,"w") as fo:
              # request more memory as some decode jobs were being killed for 
