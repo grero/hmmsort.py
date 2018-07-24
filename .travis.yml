@@ -1,14 +1,17 @@
 language: python
-python: 
+python:
     - "2.7"
+env:
+  - NUMBA_DISABLE_JIT=1
+
 before_install:
     - pip install coveralls
-install: 
+install:
     - pip install -r requirements.txt
     - pip install .
 
-script: 
-    - coverage run --source hmmsort -m py.test
+script:
+    - coverage run --source hmmsort -m py.test -s
 
 after_success:
     - coverage report

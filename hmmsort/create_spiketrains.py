@@ -157,6 +157,7 @@ class ViewWidget(QMainWindow):
                         return  # not able to continue with a sampling rate
             else:
                 self.sampling_rate = qq.get("samplingRate",qq.get("samplingrate", 0.0))
+            self.sampling_rate = self.sampling_rate*1.0  # convert to float
             template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
             merge_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.merged_lines]
             nstates = self.waveforms.shape[-1]
@@ -178,7 +179,9 @@ class ViewWidget(QMainWindow):
             	merge_timestamps = list(set(merge_timestamps))
             	merge_timestamps.sort()
 
-            	merge_waveforms = np.mean(self.waveforms[merge_idx,:,:], axis = 0)
+            	if self.ishdf5 == True:
+                    self.waveforms = np.transpose(self.waveforms[:,:,:])
+                merge_waveforms = np.mean(self.waveforms[merge_idx,:,:], axis = 0)
             	cname = "cell%02d" % (self.counter+1, )
             	cdir = os.path.join(os.path.dirname(self.sortfile), cname)
             	if not os.path.isdir(cdir):
@@ -189,17 +192,20 @@ class ViewWidget(QMainWindow):
             	self.counter += 1
 
             if saveind_idx:
-            	for i in saveind_idx:
-            		idx = template_idx.index(i)
-                	timestamps = tot_timestamps[idx][0].tolist()
-                	cname = "cell%02d" % (self.counter+1, )
-                	cdir = os.path.join(os.path.dirname(self.sortfile), cname)
-                	if not os.path.isdir(cdir):
-                		os.mkdir(cdir)
-                	fname = cdir + os.path.sep + "spiketrain.mat"
-                	mio.savemat(fname, {"timestamps": timestamps,
-                                    	"spikeForm": self.waveforms[i, :, :]})
-                	self.counter += 1
+                for i in saveind_idx:
+                    idx = template_idx.index(i)
+                    timestamps = tot_timestamps[idx][0].tolist()
+
+                    if self.ishdf5 == True:
+                        self.waveforms = np.transpose(self.waveforms)
+                    cname = "cell%02d" % (self.counter+1, )
+                    cdir = os.path.join(os.path.dirname(self.sortfile), cname)
+                    if not os.path.isdir(cdir):
+                        os.mkdir(cdir)
+                    fname = cdir + os.path.sep + "spiketrain.mat"
+                    mio.savemat(fname, {"timestamps": timestamps,
+                                    "spikeForm": self.waveforms[i, :, :]})
+                    self.counter += 1
 
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
