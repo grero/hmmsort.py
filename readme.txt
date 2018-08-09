@@ -1,27 +1,34 @@
-hmm_decode Executable
+MATLAB Compiler
 
 1. Prerequisites for Deployment 
 
-Verify that version 9.4 (R2018a) of the MATLAB Runtime is installed.   
-If not, you can run the MATLAB Runtime installer.
-To find its location, enter
+. Verify the MATLAB Runtime is installed and ensure you    
+  have installed version 9.0.1 (R2016a).   
+
+. If the MATLAB Runtime is not installed, do the following:
+  (1) enter
   
-    >>mcrinstaller
+      >>mcrinstaller
       
-at the MATLAB prompt.
+      at MATLAB prompt. The MCRINSTALLER command displays the 
+      location of the MATLAB Runtime installer.
 
-Alternatively, download and install the Linux version of the MATLAB Runtime for R2018a 
-from the following link on the MathWorks website:
+  (2) run the MATLAB Runtime installer.
 
-    http://www.mathworks.com/products/compiler/mcr/index.html
+Or download the Linux 64-bit version of the MATLAB Runtime for R2016a 
+from the MathWorks Web site by navigating to
+
+   http://www.mathworks.com/products/compiler/mcr/index.html
+   
    
 For more information about the MATLAB Runtime and the MATLAB Runtime installer, see 
 Package and Distribute in the MATLAB Compiler documentation  
-in the MathWorks Documentation Center.
+in the MathWorks Documentation Center.    
+
 
 2. Files to Deploy and Package
 
-Files to Package for Standalone 
+Files to package for Standalone 
 ================================
 -hmm_decode 
 -run_hmm_decode.sh (shell script for temporarily setting environment variables and 
@@ -31,56 +38,62 @@ Files to Package for Standalone
        ./run_hmm_decode.sh <mcr_directory> <argument_list>
        
     at Linux or Mac command prompt. <mcr_directory> is the directory 
-    where version 9.4 of the MATLAB Runtime is installed or the directory where 
+    where version 9.0.1 of the MATLAB Runtime is installed or the directory where 
     MATLAB is installed on the machine. <argument_list> is all the 
     arguments you want to pass to your application. For example, 
 
-    If you have version 9.4 of the MATLAB Runtime installed in 
-    /mathworks/home/application/v94, run the shell script as:
+    If you have version 9.0.1 of the MATLAB Runtime installed in 
+    /mathworks/home/application/v901, run the shell script as:
     
-       ./run_hmm_decode.sh /mathworks/home/application/v94
+       ./run_hmm_decode.sh /mathworks/home/application/v901
        
     If you have MATLAB installed in /mathworks/devel/application/matlab, 
     run the shell script as:
     
        ./run_hmm_decode.sh /mathworks/devel/application/matlab
 -MCRInstaller.zip
-    Note: if end users are unable to download the MATLAB Runtime using the
-    instructions in the previous section, include it when building your 
-    component by clicking the "Runtime included in package" link in the
-    Deployment Tool.
+   -if end users are unable to download the MATLAB Runtime using the above  
+    link, include it when building your component by clicking 
+    the "Runtime downloaded from web" link in the Deployment Tool
 -This readme file 
-
-
 
 3. Definitions
 
-For information on deployment terminology, go to
-http://www.mathworks.com/help and select MATLAB Compiler >
-Getting Started > About Application Deployment >
-Deployment Product Terms in the MathWorks Documentation
+For information on deployment terminology, go to 
+http://www.mathworks.com/help. Select MATLAB Compiler >   
+Getting Started > About Application Deployment > 
+Deployment Product Terms in the MathWorks Documentation 
 Center.
+
 
 4. Appendix 
 
-A. Linux systems:
-In the following directions, replace MR/v94 by the directory on the target machine where 
-   MATLAB is installed, or MR by the directory where the MATLAB Runtime is installed.
+A. Linux x86-64 systems:
+In the following directions, replace MCR_ROOT by the directory where the MATLAB Runtime 
+   is installed on the target machine.
 
 (1) Set the environment variable XAPPLRESDIR to this value:
 
-MR/v94/X11/app-defaults
+    MCR_ROOT/v901/X11/app-defaults
 
 
-(2) If the environment variable LD_LIBRARY_PATH is undefined, set it to the following:
+(2) If the environment variable LD_LIBRARY_PATH is undefined, set it to the concatenation 
+   of the following strings:
 
-MR/v94/runtime/glnxa64:MR/v94/bin/glnxa64:MR/v94/sys/os/glnxa64:MR/v94/sys/opengl/lib/glnxa64
+    MCR_ROOT/v901/runtime/glnxa64:
+    MCR_ROOT/v901/bin/glnxa64:
+    MCR_ROOT/v901/sys/os/glnxa64:
+    MCR_ROOT/v901/sys/opengl/lib/glnxa64
 
-If it is defined, set it to the following:
+    If it is defined, set it to the concatenation of these strings:
 
-${LD_LIBRARY_PATH}:MR/v94/runtime/glnxa64:MR/v94/bin/glnxa64:MR/v94/sys/os/glnxa64:MR/v94/sys/opengl/lib/glnxa64
+    ${LD_LIBRARY_PATH}: 
+    MCR_ROOT/v901/runtime/glnxa64:
+    MCR_ROOT/v901/bin/glnxa64:
+    MCR_ROOT/v901/sys/os/glnxa64:
+    MCR_ROOT/v901/sys/opengl/lib/glnxa64
 
-    For more detailed information about setting the MATLAB Runtime paths, see Package and 
+   For more detail information about setting the MATLAB Runtime paths, see Package and 
    Distribute in the MATLAB Compiler documentation in the MathWorks Documentation Center.
 
 
@@ -90,8 +103,8 @@ ${LD_LIBRARY_PATH}:MR/v94/runtime/glnxa64:MR/v94/bin/glnxa64:MR/v94/sys/os/glnxa
               setenv command.
         NOTE: The environment variable syntax utilizes forward 
               slashes (/), delimited by colons (:).  
-        NOTE: When deploying standalone applications, you can
-              run the shell script file run_hmm_decode.sh 
+        NOTE: When deploying standalone applications, it is possible 
+              to run the shell script file run_hmm_decode.sh 
               instead of setting environment variables. See 
               section 2 "Files to Deploy and Package".    
 

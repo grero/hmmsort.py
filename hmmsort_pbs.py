@@ -60,11 +60,11 @@ if __name__ == '__main__':
         # the status of the sorting 
         os.chdir(dd)
         with open(fname_learn,"w") as fo:
-            fo.write("#PBS -l nodes=1:ppn=1\n")
+            #fo.write("#PBS -l nodes=1:ppn=1\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
-            fo.write("#PBS -l walltime=24:00:00\n")
-            fo.write("#PBS -l mem=10GB\n")
-            fo.write("#PBS -q short\n")
+            #fo.write("#PBS -l walltime=24:00:00\n")
+            #fo.write("#PBS -l mem=10GB\n")
+            fo.write("#PBS -q serial\n")
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
@@ -81,7 +81,7 @@ if __name__ == '__main__':
                     flag = 1
                     break
                 except:
-                    time.sleep(5)
+                    # time.sleep(5)
                     check += 1
 
             if flag == 0:
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         with open(fname_decode,"w") as fo:
              # request more memory as some decode jobs were being killed for 
              # exceeding the default 4 GB
-            fo.write("#PBS -l mem=10GB\n")
+            #fo.write("#PBS -l mem=10GB\n")
             # commenting out next line as it does not seem necessary
             # and because I would like to keep the jobid for hmm_learn on the 
             # 3rd line since some scripts are expecting that
@@ -100,7 +100,8 @@ if __name__ == '__main__':
             # increased request for CPU hours to make sure even long jobs will be able to complete
             #fo.write("#PBS -l walltime=48:00:00\n")
             fo.write("#PBS -q serial\n")
-            if not "--dry-run" in dopts.keys():
+            fo.write("#PBS -l mem=10GB\n")
+           if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile %s Group 1 " %(execroot,fn))
@@ -113,7 +114,7 @@ if __name__ == '__main__':
         with open(fname_transfer, "w") as fo:
             # request more memory as some decode jobs were being killed for
             # exceeding the default 4 GB
-            fo.write("#PBS -l mem=10GB\n")
+            #fo.write("#PBS -l mem=10GB\n")
             # commenting out next line as it does not seem necessary
             # and because I would like to keep the jobid for hmm_learn on the
             # 3rd line since some scripts are expecting that
@@ -124,7 +125,7 @@ if __name__ == '__main__':
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" % (jobid,))
             fo.write("cd %s\n" % (dd,))
-            fo.write("cp %s/transferHippocampusData.m\n" % (execroot))
+            fo.write("cp %s/transferHippocampusData.m\n ." % (execroot))
             fo.write("matlab2016a2 -nojvm -nodisplay -nosplash -r transferHippocampusData\n")
             fo.write("rm transferHippocampusData.m\n")
 

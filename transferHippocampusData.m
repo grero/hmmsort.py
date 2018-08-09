@@ -7,33 +7,40 @@ function [] = transferHippocampusData()
 cwd = pwd;
 
 dataName = strrep(cwd,filesep,'_');
-dataName = [dataName,'.tar.gz']; % tar.gz name 
+fileName = [dataName,'.tar.gz']; % tar.gz name 
 
 indexDay = strfind(cwd,'2018');
 
 picassoDir = fullfile(filesep,'volume1','Hippocampus','Data','picasso');
 dayStr = cwd(indexDay:indexDay+7);
-targetDir = fullfile(picassoDir, dayStr, 'transferTemp'); % directory to save the tar.gz file temporarily in hippocampus
+dayDir = fullfile(picassoDir, dayStr); % directory of the day
+targetDir = fullfile(dayDir, 'transferTemp', dataName); % directory to save the tar.gz file temporarily in hippocampus
+
+sshHippocampus = 'ssh -p 8398 hippocampus@cortex.nus.edu.sg';
 
 cd ..
 
-system(['tar -czf ',dataName,' cwd']);
+system(['tar -cvzf ',fileName,' ',cwd]);
+disp(' ');
 
-system(['scp -P 8398 ',dataName,' hippocampus@cortex.nus.edu.sg:~/']);
+system(['scp -P 8398 ',fileName,' hippocampus@cortex.nus.edu.sg:~/']);
+disp(['Secured copied ',fileName,' to home directory of hippocampus ...']);
+disp(' ');
 
-system('ssh -p 8398 hippocampus@cortex.nus.edu.sg');
+system([sshHippocampus,' mkdir -p ', targetDir]);
+disp(['Made a directory ',targetDir,' ...']);
+disp(' ');
 
-system(['mkdir -p ', targetDir]);
+system([sshHippocampus,' mv -v ',fileName,' ',targetDir]);
+disp(' ');
 
-system(['mv ',dataName,' ',targetDir]);
+system([sshHippocampus,' tar -xvzf ',fullfile(targetDir,fileName),' -C ',targetDir]);
+disp(' ')
 
-cd(targetDir)
+system([sshHippocampus, ' find ',targetDir,' -name ',dayStr,' | while IFS= read file; do ',sshHippocampus,' cp -vrRup $file ',picassoDir,'; done']);
+disp(' ');
 
-system(['tar -xzf ',dataName]);
-
-system("find . -name '2018????' | while IFS= read file; do mv $file; done");
-
-system(['rm ',dataName]);
+%system([sshHippocampus,' rm -v ',fullfile(targetDir,dataName)]);
 
 end
 
