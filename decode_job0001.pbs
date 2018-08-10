@@ -1,5 +1,5 @@
 #PBS -q serial
-#PBS -l mem=5GB
+#PBS -l mem=10GB
 
 cd $PBS_O_WORKDIR
 

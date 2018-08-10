@@ -101,7 +101,7 @@ if __name__ == '__main__':
             #fo.write("#PBS -l walltime=48:00:00\n")
             fo.write("#PBS -q serial\n")
             fo.write("#PBS -l mem=10GB\n")
-           if not "--dry-run" in dopts.keys():
+            if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile %s Group 1 " %(execroot,fn))
