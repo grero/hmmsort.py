@@ -125,7 +125,7 @@ if __name__ == '__main__':
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" % (jobid,))
             fo.write("cd %s\n" % (dd,))
-            fo.write("cp %s/transferHippocampusData.m\n ." % (execroot))
+            fo.write("cp %s/transferHippocampusData.m .\n" % (execroot))
             fo.write("matlab2016a2 -nojvm -nodisplay -nosplash -r transferHippocampusData\n")
             fo.write("rm transferHippocampusData.m\n")
 
