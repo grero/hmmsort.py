@@ -1,4 +1,4 @@
-#PBS -q short
+#PBS -q serial
 
 cd $PBS_O_WORKDIR
 

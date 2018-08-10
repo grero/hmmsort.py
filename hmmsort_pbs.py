@@ -121,7 +121,7 @@ if __name__ == '__main__':
             # fo.write("#PBS -l nodes=1:ppn=1\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
             # fo.write("#PBS -l walltime=48:00:00\n")
-            fo.write("#PBS -q short\n")
+            fo.write("#PBS -q serial\n")
             if not "--dry-run" in dopts.keys():
                 fo.write("#PBS -W depend=afterok:%s\n" % (jobid,))
             fo.write("cd %s\n" % (dd,))

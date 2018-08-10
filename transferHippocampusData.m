@@ -14,7 +14,8 @@ indexDay = strfind(cwd,'2018');
 picassoDir = fullfile(filesep,'volume1','Hippocampus','Data','picasso');
 dayStr = cwd(indexDay:indexDay+7);
 dayDir = fullfile(picassoDir, dayStr); % directory of the day
-targetDir = fullfile(dayDir, 'transferTemp', dataName); % directory to save the tar.gz file temporarily in hippocampus
+tempDir = fullfile(dayDir, 'transferTemp'); % direcotry of the temporary folder
+targetDir = fullfile(tempDir, dataName); % directory to save the tar.gz file temporarily in hippocampus
 
 sshHippocampus = 'ssh -p 8398 hippocampus@cortex.nus.edu.sg';
 
@@ -77,7 +78,11 @@ while ~flag && count < 100
     try
         system([sshHippocampus, ' find ',targetDir,' -name ',dayStr,' | while IFS= read file; do ',sshHippocampus,' cp -vrRup $file ',picassoDir,'; done']);
         flag = 1;
-    catch
+	delete(dataName); % delete tar file
+	system([sshHippocampus,' rm -rv ',fullfile(tempDir,[dataName,'*'])]) % remove directory in hippocapus temporary folder
+        fid = fopen(fullfile(cwd,'transferred.txt'),'w'); % to mark the channel has been successfully transferred
+        fclose(fid);
+   catch
         disp('Retrying moving files to proper places...')
     end
 end
