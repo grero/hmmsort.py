@@ -78,7 +78,7 @@ while ~flag && count < 100
     try
         system([sshHippocampus, ' find ',targetDir,' -name ',dayStr,' | while IFS= read file; do ',sshHippocampus,' cp -vrRup $file ',picassoDir,'; done']);
         flag = 1;
-	delete(dataName); % delete tar file
+	delete(fileName); % delete tar file
 	system([sshHippocampus,' rm -rv ',fullfile(tempDir,[dataName,'*'])]) % remove directory in hippocapus temporary folder
         fid = fopen(fullfile(cwd,'transferred.txt'),'w'); % to mark the channel has been successfully transferred
         fclose(fid);
