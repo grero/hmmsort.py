@@ -1,0 +1,7 @@
+#PBS -q serial
+
+cd $PBS_O_WORKDIR
+
+cp /home/svu/lsilsc/hmmsort/transferHippocampusData.m .
+matlab2016a2 -nojvm -nodisplay -nosplash -r transferHippocampusData
+rm transferHippocampusData.m

@@ -188,7 +188,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     # the channel directory is being used to create unique tempfile filenames
     scwd = shortenCWD()
     for bw in xrange(iterations):
-        print "Iteration %d of %d" % (bw + 1, 
+        print "Iteration %d of %d" % (bw + 1,
                                      iterations)
         sys.stdout.flush()
         W = W.flatten()
@@ -227,7 +227,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     if __name__ == '__main__':
                         print"""Could not create temporary file after 100 tries."""
                         sys.stdout.flush()
-                        sys.exit(11)
+                        sys.exit(bw+11)
                     else:
                         raise IOError('Could not create temporary file')
                 files[i] = fid.name
@@ -282,7 +282,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         print """Could not save temporary file, most likely because of
                         lack of disk space"""
                         sys.stdout.flush()
-                        sys.exit(99)
+                        sys.exit(bw+22)
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
@@ -329,7 +329,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     if __name__ == '__main__':
                         print"""Could not open temporary file after 100 tries."""
                         sys.stdout.flush()
-                        sys.exit(11)
+                        sys.exit(bw+33)
                     else:
                         raise IOError('Could not open temporary file')
 
@@ -364,7 +364,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         print """Could not save temporary file, most likely because of
                         lack of disk space"""
                         sys.stdout.flush()
-                        sys.exit(99)
+                        sys.exit(bw+44)
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
