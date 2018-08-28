@@ -30,6 +30,11 @@ if __name__ == '__main__':
     if len(args) == 0:
         print "Usage: hmmsort_pbs.py [ --dry-run ] <execroot>"
         sys.exit(0)
+    if os.path.isfile("sorting_done") or os.path.isfile("sorting_inprogress"):
+	sys.stdout.write("In progress. Skipping...\n")
+	sys.stdout.flush()
+	sys.exit(0)
+    return_path = dopts.get("--return_path", "")
     execroot = args[0]
     thislevel = level(os.getcwd())
     # get all highpass datafiles
@@ -71,6 +76,8 @@ if __name__ == '__main__':
             fo.write("--max_size 1000000 --tempPath /hpctmp2/%s/tmp/\n" %(getpass.getuser()))
 
         if not "--dry-run" in dopts.keys():
+	    fii = open("sorting_inprogress","w")
+	    fii.close()
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
 
         with open(fname_decode,"w") as fo:
@@ -92,4 +99,13 @@ if __name__ == '__main__':
 
         if not "--dry-run" in dopts.keys():
              jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
+	with open("sorting_cleanup.txt","w") as fr:
+	    fr.write("#PBS -q serial\n")
+            if not "--dry-run" in dopts.keys():
+                fr.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
+            fr.write("cd %s\n" %(dd,))
+            fr.write("rm sorting_inprogress\n")
+	    fr.write("touch sorting_done\n")
+	if not "--dry-run" in dopts.keys():
+             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',"sorting_cleanup.txt"]).strip()
     sys.exit(0)
