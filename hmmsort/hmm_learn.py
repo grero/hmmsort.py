@@ -205,7 +205,8 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             outf = h5py.File(outfile,'a')
         except IOError:
             #file exists; what do we do?
-            print 'An error occurred trying to open the file %s...' %(outfile,)
+            sys.stderr.write("An error occurred trying to open the file %s...\n" %(outfile,))
+	    sys.stderr.flush()
             sys.exit(0)
 
     print "Before entering learnTemplates, choosing version now..."
@@ -769,9 +770,9 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        print """Could not save temporary file, most likely because of
-                        lack of disk space"""
-                        sys.exit(i+55)
+                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space\n")
+			sys.stderr.flush()
+                        sys.exit(99)
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
@@ -1295,7 +1296,8 @@ if __name__ == '__main__':
             #get the descriptor, if any
             descriptorFile = glob.glob('*_descriptor.txt')
             if len(descriptorFile)==0:
-                print "No descriptpr file found. Exiting.."
+                sys.stderr.write("No descriptpr file found. Exiting..\n")
+		sys.stderr.flush()
                 sys.exit(3)
             descriptorFile = descriptorFile[0]
             #get the base from the descriptor file
@@ -1466,14 +1468,15 @@ if __name__ == '__main__':
                                                          redo=redo,iterations=iterations,
                                                         tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset, min_snr=min_snr)
             except IOError:
-		print('Something is wrong in hmm_learn main code...')
-                print "Could not read/write to file"
-                traceback.print_exc(file=sys.stdout)
-                sys.exit(51)
+                sys.stderr.write("Could not read/write to file\n")
+                traceback.print_exc(file=sys.stderr)
+		sys.stderr.flush()
+                sys.exit(99)
     except SystemExit as ee:
         # honour the request to quit by simply re-issuing the call to exit with the correct code
         sys.exit(ee.code)
     except:
-        print "An error occurred"
-        traceback.print_exc(file=sys.stdout)
+        sys.stderr.write("An error occurred\n")
+        sys.stderr.flush()
+        traceback.print_exc(file=sys.stderr)
         sys.exit(100)

@@ -225,9 +225,9 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         break
                 if kk == 100:
                     if __name__ == '__main__':
-                        print"""Could not create temporary file after 100 tries."""
-                        sys.stdout.flush()
-                        sys.exit(bw+11)
+                        sys.stderr.write("Could not create temporary file after 100 tries.\n")
+                        sys.stderr.flush()
+                        sys.exit(11)
                     else:
                         raise IOError('Could not create temporary file')
                 files[i] = fid.name
@@ -279,10 +279,9 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        print """Could not save temporary file, most likely because of
-                        lack of disk space"""
-                        sys.stdout.flush()
-                        sys.exit(bw+22)
+                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space\n")
+                        sys.stderr.flush()
+                        sys.exit(99)
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
@@ -327,9 +326,9 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         break
                 if kk == 100:
                     if __name__ == '__main__':
-                        print"""Could not open temporary file after 100 tries."""
-                        sys.stdout.flush()
-                        sys.exit(bw+33)
+                        sys.stderr.write("Could not open temporary file after 100 tries.\n")
+                        sys.stderr.flush()
+                        sys.exit(11)
                     else:
                         raise IOError('Could not open temporary file')
 
@@ -361,10 +360,9 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        print """Could not save temporary file, most likely because of
-                        lack of disk space"""
-                        sys.stdout.flush()
-                        sys.exit(bw+44)
+                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space.\n")
+                        sys.stderr.flush()
+                        sys.exit(99)
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
