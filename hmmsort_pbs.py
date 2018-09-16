@@ -132,5 +132,5 @@ if __name__ == '__main__':
         if not "--dry-run" in dopts.keys():
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_transfer]).strip()
 
-
+    sys.stdout.write(str(jobid))
     sys.exit(0)
