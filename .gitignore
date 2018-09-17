@@ -97,5 +97,5 @@ octave-workspace
 *readme.txt
 *requiredMCRProducts.txt
 *.sh
-build*
+build/*
 *.swp
