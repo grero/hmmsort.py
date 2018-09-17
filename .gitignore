@@ -92,7 +92,8 @@ codegen/
 octave-workspace
 
 # Compile file
-*hmm_decode
+hmm_decode
+run_hmm_decode.sh
 *mccExcludedFiles.log
 *readme.txt
 *requiredMCRProducts.txt
