@@ -98,3 +98,4 @@ octave-workspace
 *requiredMCRProducts.txt
 *.sh
 build*
+*.swp
