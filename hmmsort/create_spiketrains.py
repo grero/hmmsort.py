@@ -290,9 +290,21 @@ def select_waveforms(fname="spike_templates.hdf5"):
                     plot_waveforms(waveforms, pp)
                     ff.close()
 
+
+def create_spiketrains(window_class):
+    app_created = False
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        app_created = True
+    app.references = set()
+    window = window_class()
+    app.references.add(window)
+    window.show()
+    window.select_waveforms()
+    if app_created:
+        app.exec_()
+    return window
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    mw = ViewWidget()
-    mw.select_waveforms()
-    mw.show()
-    sys.exit(app.exec_())
+    create_spiketrains(ViewWidget)
