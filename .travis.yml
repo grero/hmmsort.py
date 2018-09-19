@@ -5,6 +5,8 @@ env:
   - NUMBA_DISABLE_JIT=1
 
 before_install:
+    - sudo apt-get update
+    - sudo apt-get install python-pyqt5
     - pip install coveralls
     - pip install pytest-qt
     - pip install pytest-xvfb
