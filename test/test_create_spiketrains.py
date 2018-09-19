@@ -15,7 +15,7 @@ def download_file(fname):
 
 @pytest.mark.order2
 def test_pick_lines(qtbot):
-    dd = tempfile.mkdtemp() 
+    dd = tempfile.mkdtemp()
     cwd = os.getcwd()
     os.chdir(dd)
     #download data
