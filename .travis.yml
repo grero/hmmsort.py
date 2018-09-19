@@ -1,12 +1,11 @@
 language: python
 python:
-    - "2.7"
+    - "2.7_with_system_site_packages"
 env:
   - NUMBA_DISABLE_JIT=1
 
 before_install:
-    - sudo apt-get update
-    - sudo apt-get -y install python-pyqt5
+    - sudo bash install_qt.sh
     - pip install coveralls
     - pip install pytest-qt
     - pip install pytest-xvfb
