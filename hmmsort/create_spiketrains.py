@@ -160,8 +160,7 @@ class ViewWidget(QMainWindow):
             self.sampling_rate = self.sampling_rate*1.0  # convert to float
             template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
             merge_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.merged_lines]
-            nstates = self.waveforms.shape[-1]
-            pidx = int(nstates/3)
+            pidx = int(self.nstates/3)
             if qq["mlseq"].shape[0] == self.waveforms.shape[0]:
                 uidx, tidx = np.where(qq["mlseq"][:] == pidx)
             else:
@@ -241,11 +240,13 @@ class ViewWidget(QMainWindow):
                     self.ishdf5 = True
                     ff = h5py.File(f, "r")
                     self.waveforms = ff["spikeForms"][:]
+                    self.nstates = self.waveforms.shape[0]
                     ff.close()
                 else:
                     self.ishdf5 = False
                     ff = mio.loadmat(f)
                     self.waveforms = ff["spikeForms"]
+                    self.nstates = self.waveforms.shape[-1]
         cwd = os.getcwd()
         os.chdir("hmmsort")
         cinv_file = h5py.File(cinv_fname, "r")
