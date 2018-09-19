@@ -141,7 +141,7 @@ class ViewWidget(QMainWindow):
                 p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
         ax.legend()
 
-    def save_spiketrains(self):
+    def save_spiketrains(self, notify=True):
         tot_timestamps = []
         num_timestamps = []
         merge_timestamps = [] # for all merged waveforms
@@ -206,11 +206,12 @@ class ViewWidget(QMainWindow):
                                     "spikeForm": self.waveforms[i, :, :]})
                     self.counter += 1
 
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setText("Spiketrains saved")
-            msg.setWindowTitle("Info")
-            retval = msg.exec_()
+            if notify:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Information)
+                msg.setText("Spiketrains saved")
+                msg.setWindowTitle("Info")
+                retval = msg.exec_()
 
     def select_waveforms(self, fname="hmmsort.mat", cinv_fname = "spike_templates.hdf5"):
         if not os.path.isfile(fname):

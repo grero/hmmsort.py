@@ -6,12 +6,14 @@ env:
 
 before_install:
     - pip install coveralls
+    - pip install pytest-qt
+
 install:
     - pip install -r requirements.txt
     - pip install .
 
 script:
-    - coverage run --source hmmsort -m py.test -s
+    - coverage run --source hmmsort -m py.test -s -q
 
 after_success:
     - coverage report
