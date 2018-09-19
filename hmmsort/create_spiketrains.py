@@ -32,7 +32,7 @@ class SaveFile():
         else:
             self.ff = mio.loadmat(self.fname)
         return self.ff
-    
+
     def __exit__(self, type, value, traceback):
         if self.ishdf5:
             try:
@@ -73,9 +73,9 @@ class ViewWidget(QMainWindow):
         layout.addWidget(self.navigation_toolbar, 0)
         layout.addWidget(self.figure_canvas, 10)
         self.figure = self.figure_canvas.figure
-        
+
         self.figure.canvas.mpl_connect('pick_event', self.pick_event)
-    
+
         ax = self.figure.add_subplot(111)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -88,7 +88,7 @@ class ViewWidget(QMainWindow):
         self.picked_lines = []
         self.sampling_rate = -1.0
         self.counter = 0
-    
+
     def addto_array(self, merged, new):
         merged.extend(new[0])
         return merged
@@ -107,7 +107,7 @@ class ViewWidget(QMainWindow):
         elif lw > 1.5:
             artist.set_linewidth(lw/2)
             self.picked_lines.remove(label)
-        
+
         self.key = QApplication.keyboardModifiers()
         if (self.key == Qt.ShiftModifier) and (lw == 1.5) : # detect waveforms to merge
             artist.set_color("gray")
@@ -169,7 +169,7 @@ class ViewWidget(QMainWindow):
                 iidx, = np.where(uidx == tt)
                 tot_timestamps.append(tidx[iidx]*1000/self.sampling_rate)
             saveind_idx = list(set(template_idx) - set(merge_idx)) # only waveforms to save individually
-            
+
             if merge_idx:
             	for i in merge_idx:
             		idx = merge_idx.index(i)
@@ -266,7 +266,7 @@ def plot_waveforms(waveforms):
         ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
     plt.legend()
     fig.canvas.mpl_connect('pick_event', pick_event)
-    
+
 def pick_event(event):
     artist = event.artist
     lw = artist.get_linewidth()
