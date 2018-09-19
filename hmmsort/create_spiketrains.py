@@ -249,7 +249,10 @@ class ViewWidget(QMainWindow):
                     self.waveforms = ff["spikeForms"]
                     self.nstates = self.waveforms.shape[-1]
         cwd = os.getcwd()
-        os.chdir("hmmsort")
+        if not os.path.isfile(cinv_fname):
+            os.chdir("hmmsort")
+        if not os.path.isfile(cinv_fname):
+            return
         cinv_file = h5py.File(cinv_fname, "r")
         self.cinv = cinv_file["cinv"][:]
         cinv_file.close()
