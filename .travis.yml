@@ -9,6 +9,7 @@ before_install:
     - pip install coveralls
     - pip install pytest-qt
     - pip install pytest-xvfb
+    - pip install pytest-ordering
 
 install:
     - pip install -r requirements.txt

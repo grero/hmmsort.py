@@ -2,7 +2,9 @@ import hmmsort
 import hmmsort.create_spiketrains as create_spiketrains
 import matplotlib
 import os
+import pytest
 
+@pytest.mark.order2
 def test_pick_lines(qtbot):
     cwd = os.getcwd()
     os.chdir("test/array01/channel001") 
