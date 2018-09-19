@@ -110,7 +110,7 @@ if __name__ == '__main__':
             fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5 ")
             fo.write("SaveFile hmmsort.mat hdf5path after_noise\n")
             fo.write("else\n")
-            fo.write("echo decode job is skipped")
+            fo.write("echo decode job is skipped\n")
             fo.write("fi")
 
         if not "--dry-run" in dopts.keys():
