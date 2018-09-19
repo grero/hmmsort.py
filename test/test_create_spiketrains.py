@@ -34,6 +34,6 @@ def test_pick_lines(qtbot):
     os.unlink("cell01/spiketrain.mat")
     os.unlink("cell02/spiketrain.mat")
     os.rmdir("cell01")
-    os.rmdir("Cell02")
+    os.rmdir("cell02")
     os.chdir(cwd)
     os.rmdir(dd)
