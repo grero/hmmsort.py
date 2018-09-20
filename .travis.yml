@@ -1,17 +1,22 @@
 language: python
 python:
-    - "2.7"
+    - "2.7_with_system_site_packages"
 env:
   - NUMBA_DISABLE_JIT=1
 
 before_install:
+    - sudo bash install_qt.sh
     - pip install coveralls
+    - pip install pytest-qt
+    - pip install pytest-xvfb
+    - pip install pytest-ordering
+
 install:
     - pip install -r requirements.txt
     - pip install .
 
 script:
-    - coverage run --source hmmsort -m py.test -s
+    - coverage run --source hmmsort -m py.test -s -q
 
 after_success:
     - coverage report

@@ -32,7 +32,7 @@ class SaveFile():
         else:
             self.ff = mio.loadmat(self.fname)
         return self.ff
-    
+
     def __exit__(self, type, value, traceback):
         if self.ishdf5:
             try:
@@ -73,9 +73,9 @@ class ViewWidget(QMainWindow):
         layout.addWidget(self.navigation_toolbar, 0)
         layout.addWidget(self.figure_canvas, 10)
         self.figure = self.figure_canvas.figure
-        
+
         self.figure.canvas.mpl_connect('pick_event', self.pick_event)
-    
+
         ax = self.figure.add_subplot(111)
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
@@ -88,7 +88,7 @@ class ViewWidget(QMainWindow):
         self.picked_lines = []
         self.sampling_rate = -1.0
         self.counter = 0
-    
+
     def addto_array(self, merged, new):
         merged.extend(new[0])
         return merged
@@ -107,7 +107,7 @@ class ViewWidget(QMainWindow):
         elif lw > 1.5:
             artist.set_linewidth(lw/2)
             self.picked_lines.remove(label)
-        
+
         self.key = QApplication.keyboardModifiers()
         if (self.key == Qt.ShiftModifier) and (lw == 1.5) : # detect waveforms to merge
             artist.set_color("gray")
@@ -141,7 +141,7 @@ class ViewWidget(QMainWindow):
                 p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
         ax.legend()
 
-    def save_spiketrains(self):
+    def save_spiketrains(self, notify=True):
         tot_timestamps = []
         num_timestamps = []
         merge_timestamps = [] # for all merged waveforms
@@ -157,10 +157,10 @@ class ViewWidget(QMainWindow):
                         return  # not able to continue with a sampling rate
             else:
                 self.sampling_rate = qq.get("samplingRate",qq.get("samplingrate", 0.0))
+            self.sampling_rate = self.sampling_rate[:]*1.0  # convert to float
             template_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.picked_lines]
             merge_idx = [int(filter(lambda x: x.isdigit(), v)) for v in self.merged_lines]
-            nstates = self.waveforms.shape[-1]
-            pidx = int(nstates/3)
+            pidx = int(self.nstates/3)
             if qq["mlseq"].shape[0] == self.waveforms.shape[0]:
                 uidx, tidx = np.where(qq["mlseq"][:] == pidx)
             else:
@@ -203,11 +203,12 @@ class ViewWidget(QMainWindow):
                                         "spikeForm": self.waveforms[i, :, :]})
                     self.counter += 1
 
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setText("Spiketrains saved")
-            msg.setWindowTitle("Info")
-            retval = msg.exec_()
+            if notify:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Information)
+                msg.setText("Spiketrains saved")
+                msg.setWindowTitle("Info")
+                retval = msg.exec_()
 
     def select_waveforms(self, fname="hmmsort.mat", cinv_fname = "spike_templates.hdf5"):
         if not os.path.isfile(fname):
@@ -237,13 +238,18 @@ class ViewWidget(QMainWindow):
                     self.ishdf5 = True
                     ff = h5py.File(f, "r")
                     self.waveforms = ff["spikeForms"][:]
+                    self.nstates = self.waveforms.shape[0]
                     ff.close()
                 else:
                     self.ishdf5 = False
                     ff = mio.loadmat(f)
                     self.waveforms = ff["spikeForms"]
+                    self.nstates = self.waveforms.shape[-1]
         cwd = os.getcwd()
-        os.chdir("hmmsort")
+        if not os.path.isfile(cinv_fname):
+            os.chdir("hmmsort")
+        if not os.path.isfile(cinv_fname):
+            return
         cinv_file = h5py.File(cinv_fname, "r")
         self.cinv = cinv_file["cinv"][:]
         cinv_file.close()
@@ -261,7 +267,7 @@ def plot_waveforms(waveforms):
         ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
     plt.legend()
     fig.canvas.mpl_connect('pick_event', pick_event)
-    
+
 def pick_event(event):
     artist = event.artist
     lw = artist.get_linewidth()
@@ -285,9 +291,21 @@ def select_waveforms(fname="spike_templates.hdf5"):
                     plot_waveforms(waveforms, pp)
                     ff.close()
 
+
+def create_spiketrains(window_class):
+    app_created = False
+    app = QCoreApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+        app_created = True
+    app.references = set()
+    window = window_class()
+    app.references.add(window)
+    window.show()
+    window.select_waveforms()
+    if app_created:
+        app.exec_()
+    return window
+
 if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    mw = ViewWidget()
-    mw.select_waveforms()
-    mw.show()
-    sys.exit(app.exec_())
+    create_spiketrains(ViewWidget)
