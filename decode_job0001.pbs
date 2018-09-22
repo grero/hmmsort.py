@@ -3,4 +3,4 @@
 
 cd $PBS_O_WORKDIR
 
-/home/svu/lsilsc/hmmsort/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile rplhighpass.mat Group 1 fileName hmmsort/spike_templates.hdf5 save hdf5 SaveFile hmmsort.mat hdf5path after_noise
+~/hmmsort/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile rplhighpass.mat Group 1 fileName hmmsort/spike_templates.hdf5 save hdf5 SaveFile hmmsort.mat hdf5path after_noise
