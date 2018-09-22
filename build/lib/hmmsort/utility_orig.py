@@ -133,21 +133,19 @@ def backward2(data, W, g, spklength,
         g[:, t] = g[:, t] * b + tiny
 
 def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,
-                chunksize=10000,debug=False,levels=None,tempPath=None, rseed=None, **kwargs):
+                chunksize=10000,debug=False,levels=None,tempPath=None,**kwargs):
     """
     This function runs the baum-welch algorithm on the specified data, learning spiking templates. The input data should have dimensions of datapts X channels. This code runs on the data in chunks, offloading data to disk when not in use. This allows it to analyse arbitrarily long sequences of data.
     """
-    prestates = 0
-    poststates = 0
+    prestates = states/3
+    poststates = states/3
     levels = data.shape[1]
     if np.all(spkform == None):
         neurons = 8
-        if rseed is not None:
-            np.random.seed(rseed)
         amp = np.random.random(size=(neurons,levels))+0.5
         #amp = amp/amp.max(1)[:, None]
         spkform = np.concatenate((np.zeros((levels, prestates)),
-                                  np.sin(np.linspace(0,3*np.pi,states - prestates-poststates))[None,:].repeat(levels,0),
+                                  np.sin(np.linspace(0,3*np.pi,prestates))[None,:].repeat(levels,0),
                                   np.zeros((levels,poststates))),axis=1)[None,:,:]*amp[:,:,None]*(np.median(np.abs(data),axis=0)/0.6745)[None,:,None]
     else:
         neurons,levels,spklength = spkform.shape
@@ -225,8 +223,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         break
                 if kk == 100:
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not create temporary file after 100 tries.\n")
-                        sys.stderr.flush()
+                        print"""Could not create temporary file after 100 tries."""
+                        sys.stdout.flush()
                         sys.exit(11)
                     else:
                         raise IOError('Could not create temporary file')
@@ -279,8 +277,9 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space\n")
-                        sys.stderr.flush()
+                        print """Could not save temporary file, most likely because of
+                        lack of disk space"""
+                        sys.stdout.flush()
                         sys.exit(99)
                     else:
                         #raise an IO error
@@ -326,8 +325,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         break
                 if kk == 100:
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not open temporary file after 100 tries.\n")
-                        sys.stderr.flush()
+                        print"""Could not open temporary file after 100 tries."""
+                        sys.stdout.flush()
                         sys.exit(11)
                     else:
                         raise IOError('Could not open temporary file')
@@ -360,8 +359,9 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space.\n")
-                        sys.stderr.flush()
+                        print """Could not save temporary file, most likely because of
+                        lack of disk space"""
+                        sys.stdout.flush()
                         sys.exit(99)
                     else:
                         #raise an IO error

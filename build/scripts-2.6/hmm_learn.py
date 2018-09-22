@@ -1,4 +1,4 @@
-#!~/anaconda2/bin/python
+#!/usr/bin/python
 """@package hmm_learn
 This package contains a set of functions to learn spike templates from highpass
 data
@@ -117,9 +117,6 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     variables nFileChunks and fileChunkId indicate, respectively, the number of
     file that the data file is divide into, and the chunk to process.
     """
-
-    print "Entered learnTemplatesFromFile..."
-
     if not os.path.isfile(dataFile):
         print "File at path %s could not be found " % (dataFile,)
         return [], []
@@ -127,7 +124,6 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     print "Reading data from file %s" %(dataFile, )
     # check what kind of file we are dealing with
     fname,ext = os.path.splitext(dataFile)
-
     if ext == '.mat':
         if h5py.is_hdf5(dataFile):
             ff = h5py.File(dataFile,'r')
@@ -145,7 +141,6 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     else:
         data,sr = extraction.readDataFile(dataFile)
         sampling_rate = sr
-
     head,tail = os.path.split(dataFile)
     if data.ndim == 2:
         nchannels = data.shape[0]
@@ -169,19 +164,16 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         del data
     else:
         cdata = data[:,None]
-
     if divideByGain and 'gain' in descriptor:
         cdata = cdata/np.float(descriptor['gain'])
 
     if max_size is not None:
         cdata = cdata[offset:offset+max_size,:]
-
     if nFileChunks!=None and fileChunkId!=None:
         #we should only process parts of the file
         fileChunkSize = np.ceil(1.0*cdata.shape[0]/nFileChunks)
 
         cdata = cdata[fileChunkId*fileChunkSize:(fileChunkId+1)*fileChunkSize, :]
-
     if save:
         if outfile == None:
             name,ext = os.path.splitext(tail)
@@ -205,16 +197,9 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             outf = h5py.File(outfile,'a')
         except IOError:
             #file exists; what do we do?
-            sys.stderr.write("An error occurred trying to open the file %s...\n" %(outfile,))
-	    sys.stderr.flush()
+            print 'An error occurred trying to open the file %s...' %(outfile,)
             sys.exit(0)
-
-    print "Before entering learnTemplates, choosing version now..."
-
     if version == 1:
-
-    	print "Version 1 is chosen..."
-
         #compute the covariance matrix of the full data
         cinv = np.linalg.pinv(np.cov(cdata.T))
         #divide file into two chunks
@@ -248,9 +233,6 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         if spkforms.shape[0]>=2:
             spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0], maxp=maxp)
     else:
-
-    	print "Version other than 1 is chosen..."
-
         if save:
             outf.close()
         else:
@@ -258,9 +240,6 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,
                                          chunksize=chunksize,version=version,
                                          saveToFile=outfile,**kwargs)
-
-    print "Finished learnTemplates..."
-
     if spikeForms != None and 'second_learning' in spikeForms and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
         if save:
             #reopen to save the last result
@@ -294,7 +273,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     return spikeForms,cinv
 
 def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=3,
-                   saveToFile=False,redo=False,iterations=3,spike_length=1.5, maxp=12.0, **kwargs):
+                   saveToFile=False,redo=False,iterations=3,spike_length=1.5, **kwargs):
     """
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -307,9 +286,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 spkform : the learned templates
                 p   :   the estimated probability of firing for each template
     """
-
-    print "Entered learnTemplates..."
-
     if samplingRate == None:
         samplingRate = 30000.0
     states = kwargs.get('states')
@@ -381,8 +357,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                                                      'p': p}
 
     if not 'all' in spikeForms:
-	print "Entering learn f in not all in spikeForms"
-
         data,spkform,p,cinv = learnf(data,iterations=iterations,debug=debug,
                                      levels=data.shape[1],**kwargs)
         try:
@@ -443,8 +417,6 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     if len(spkform)>0:
         if not 'second_learning' in spikeForms:
             #learn some more
-	    print "Entering learnf in len(spkform)"
-
             data,spkform,p,cinv = learnf(data,spkform,iterations=2,cinv=cinv,p=p,**kwargs)
             spikeForms['second_learning'] = {'spikeForms':spkform,'p':p}
             if saveToFile and len(p)>0:
@@ -770,9 +742,9 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space\n")
-			sys.stderr.flush()
-                        sys.exit(99)
+                        print """Could not save temporary file, most likely because of
+                        lack of disk space"""
+                        sys.exit(i+55)
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
@@ -1296,8 +1268,7 @@ if __name__ == '__main__':
             #get the descriptor, if any
             descriptorFile = glob.glob('*_descriptor.txt')
             if len(descriptorFile)==0:
-                sys.stderr.write("No descriptpr file found. Exiting..\n")
-		sys.stderr.flush()
+                print "No descriptpr file found. Exiting.."
                 sys.exit(3)
             descriptorFile = descriptorFile[0]
             #get the base from the descriptor file
@@ -1460,7 +1431,6 @@ if __name__ == '__main__':
                 sys.stdout.flush()
 
             try:
-		print "Entering learnTemplatesFromFile"
                 spikeForms,cinv = learnTemplatesFromFile(dataFileName, group, splitp=splitp,
                                                          outfile=outFileName, chunksize=chunkSize,
                                                          version=version, debug=debug,
@@ -1468,15 +1438,13 @@ if __name__ == '__main__':
                                                          redo=redo,iterations=iterations,
                                                         tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset, min_snr=min_snr)
             except IOError:
-                sys.stderr.write("Could not read/write to file\n")
-                traceback.print_exc(file=sys.stderr)
-		sys.stderr.flush()
-                sys.exit(99)
+                print "Could not read/write to file"
+                traceback.print_exc(file=sys.stdout)
+                sys.exit(66)
     except SystemExit as ee:
         # honour the request to quit by simply re-issuing the call to exit with the correct code
         sys.exit(ee.code)
     except:
-        sys.stderr.write("An error occurred\n")
-        sys.stderr.flush()
-        traceback.print_exc(file=sys.stderr)
+        print "An error occurred"
+        traceback.print_exc(file=sys.stdout)
         sys.exit(100)
