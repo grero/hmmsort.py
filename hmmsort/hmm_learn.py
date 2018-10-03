@@ -103,7 +103,7 @@ def forward(g,P,spklength,N,winlength,p):
     #err = weave.inline(code,['p','_np','q','g','winlength','P','spklength','M'])
     return g
 
-def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1000000,version=3,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False, max_size=None, offset=0, **kwargs):
+def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=None,chunksize=1000000,nFileChunks=None,fileChunkId=None,divideByGain=False,reorder=False, max_size=None, offset=0, **kwargs):
     """
     Learns templates from the file pointed to by dataFile. The data should be
     stored channel wise in int16 format, i.e. the resulting array should have
@@ -200,47 +200,13 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             sys.stderr.write("An error occurred trying to open the file %s...\n" %(outfile,))
 	    sys.stderr.flush()
             sys.exit(0)
-    if version == 1:
-        #compute the covariance matrix of the full data
-        cinv = np.linalg.pinv(np.cov(cdata.T))
-        #divide file into two chunks
-        nchunks = int(np.ceil(1.0*cdata.shape[0]/chunksize))
-        spkforms = []
-        p = []
-        for i in xrange(nchunks):
-            print "Processing chunk %d of %d..." % (i+1,nchunks)
-            sys.stdout.flush()
-            try:
-                sp,pp,_ = learnTemplates(cdata[i*chunksize:(i+1)*chunksize,:],samplingRate = sampling_rate,**kwargs)
-
-                spkforms.extend(sp)
-                p.extend(pp)
-                if save and len(sp)>0:
-                    try:
-                        outf.create_group('chunk%d' %(i,))
-                        outf['chunk%d' %(i,)]['spikeForms'] = sp
-                        outf['chunk%d' %(i,)]['p'] = pp
-                    except:
-                        pass
-                    finally:
-                        outf.flush()
-            except:
-                continue
-        spkforms = np.array(spkforms)
-        p = np.array(p)
-        #spkforms2,p2,_ = learnTemplates(cdata[:data.shape[0]/2,:],samplingRate = sampling_rate,**kwargs)
-
-        #combine spkforms from both chunks
-        if spkforms.shape[0]>=2:
-            spkforms,p = combineSpikes(spkforms,p,cinv,data.shape[0], maxp=maxp)
+    if save:
+        outf.close()
     else:
-        if save:
-            outf.close()
-        else:
-            outfile = False
-        spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,
-                                         chunksize=chunksize,version=version,
-                                         saveToFile=outfile,**kwargs)
+        outfile = False
+    spikeForms,cinv = learnTemplates(cdata,samplingRate=sampling_rate,
+                                     chunksize=chunksize,
+                                     saveToFile=outfile,**kwargs)
     if spikeForms != None and 'second_learning' in spikeForms and spikeForms['second_learning']['after_sparse']['spikeForms'].shape[0]>=1:
         if save:
             #reopen to save the last result
@@ -273,8 +239,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
 
     return spikeForms,cinv
 
-def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,version=3,
-                   saveToFile=False,redo=False,iterations=3,spike_length=1.5, maxp=12.0, **kwargs):
+def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None, saveToFile=False,redo=False,iterations=3,spike_length=1.5, maxp=12.0, **kwargs):
     """
     Learns templates from the data using the Baum-Welch algorithm.
         Inputs:
@@ -302,13 +267,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     if save:
         #open a file to save the spkforms to
         pass
-    #version 2 uses chunking more aggressively, and does not make heavy use of memory maps
-    if version == 2:
-        learnf = learndbw1v2
-    elif version == 3:
-        learnf = utility.learn
-    else:
-        learnf = learndbw1
+    learnf = utility.learn
     if saveToFile:
         try:
             outFile = h5py.File(saveToFile,'a')
@@ -1194,7 +1153,7 @@ if __name__ == '__main__':
         opts,args = getopt.getopt(sys.argv[1:],'',longopts=['sourceFile=','group=',
                                                             'minFiringRate=','outFile=',
                                                             'combine','chunkSize=',
-                                                            'version=','debug',
+                                                            'debug',
                                                             'fileChunkSize=','redo',
                                                             'max_size=', 'offset=',
                                                             'basePath=','channels=',
@@ -1208,7 +1167,7 @@ if __name__ == '__main__':
             #print help message and quit
             print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
-            [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 4.0] [--states 45]
+            [--minFiringRate 0.5 ] [--iterations 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 4.0] [--states 45]
             """
 
             sys.exit(0)
@@ -1221,7 +1180,6 @@ if __name__ == '__main__':
         chunkSize = min(int(opts.get('--chunkSize','100000')),100000)
         maxSize = int(opts.get('--max_size', sys.maxint))
         offset = int(opts.get('--offset', 0))
-        version = int(opts.get('--version','3'))
         debug = opts.has_key('--debug')
         redo = opts.has_key('--redo')
         reoder = opts.has_key('--reorder')
@@ -1435,7 +1393,7 @@ if __name__ == '__main__':
             try:
                 spikeForms,cinv = learnTemplatesFromFile(dataFileName, group, splitp=splitp,
                                                          outfile=outFileName, chunksize=chunkSize,
-                                                         version=version, debug=debug,
+                                                         debug=debug,
                                                          nFileChunks=nchunks, fileChunkId=tid,
                                                          redo=redo,iterations=iterations,
                                                         tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset, min_snr=min_snr)
