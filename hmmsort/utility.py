@@ -21,6 +21,18 @@ def testfunc2(a):
 @numba.autojit
 def forward(data, W, g, spklength, 
             winlength, c, q, N, p,f):
+    """
+    data :  high pass filtered data
+    W    : spike templates
+    g     :  forward probability
+    spklength : number of states per template
+    winlength : length of analysis window
+    c   :   inverse covariance matrix
+    q   :   index vector
+    N   :   number of templates
+    p   :   probability of spiking
+    f   :   temp vector
+    """
     tiny = np.exp(-700)
     P = p.sum()
     for t in xrange(1, winlength):
