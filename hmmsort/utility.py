@@ -19,7 +19,7 @@ def testfunc2(a):
         a[n-i-1]  = q
 
 @numba.autojit
-def forward(data, W, g, spklength, 
+def forward(data, W, g, spklength,
             winlength, c, q, N, p,f):
     """
     data :  high pass filtered data
@@ -46,7 +46,7 @@ def forward(data, W, g, spklength,
         gg = g[1:2 + (N - 1)*(spklength - 1):(spklength - 1), t]
         a = 0.
         for k in xrange(gg.shape[0]):
-            a += gg[k] 
+            a += gg[k]
         g[0, t] = a + g[0, t] - g[0, t - 1]*P
         g[1:2 + (N - 1) * (spklength - 1):(spklength - 1), t] = g[0, t - 1] * p
         g[:, t] = g[:, t]*f + tiny
@@ -89,7 +89,7 @@ def forward2(data, W, g, spklength,
                        's': numba.float64,
                        'gg': numba.float64[:],
                        'bb': numba.float64[:]})
-def backward(data, W, g, spklength, 
+def backward(data, W, g, spklength,
             winlength, c, q, N, p, b,f):
     tiny = np.exp(-700)
     P = p.sum()
@@ -111,7 +111,7 @@ def backward(data, W, g, spklength,
         a = 0.
         for k in xrange(gg.shape[0]):
             a += p[k]*gg[k]
-        b[0] += a 
+        b[0] += a
         for i in xrange(spklength-1,1+(N-1)*(spklength-1),
                         spklength-1):
             b[i] = b[nb-1]
