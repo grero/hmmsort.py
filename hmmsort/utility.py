@@ -19,8 +19,20 @@ def testfunc2(a):
         a[n-i-1]  = q
 
 @numba.autojit
-def forward(data, W, g, spklength, 
+def forward(data, W, g, spklength,
             winlength, c, q, N, p,f):
+    """
+    data :  high pass filtered data
+    W    : spike templates
+    g     :  forward probability
+    spklength : number of states per template
+    winlength : length of analysis window
+    c   :   inverse covariance matrix
+    q   :   index vector
+    N   :   number of templates
+    p   :   probability of spiking
+    f   :   temp vector
+    """
     tiny = np.exp(-700)
     P = p.sum()
     for t in xrange(1, winlength):
@@ -34,7 +46,7 @@ def forward(data, W, g, spklength,
         gg = g[1:2 + (N - 1)*(spklength - 1):(spklength - 1), t]
         a = 0.
         for k in xrange(gg.shape[0]):
-            a += gg[k] 
+            a += gg[k]
         g[0, t] = a + g[0, t] - g[0, t - 1]*P
         g[1:2 + (N - 1) * (spklength - 1):(spklength - 1), t] = g[0, t - 1] * p
         g[:, t] = g[:, t]*f + tiny
@@ -43,41 +55,13 @@ def forward(data, W, g, spklength,
             a += g[k, t]
         g[:, t] = g[:, t] / (a+tiny)
 
-def forward2(data, W, g, spklength, 
-            winlength, c, q, N, p,f):
-    """
-    data :  high pass filtered data
-    W    : spike templates
-    g     :  forward probability
-    spklength : number of states per template 
-    winlength : length of analysis window
-    c   :   inverse covariance matrix
-    q   :   index vector 
-    N   :   number of templates
-    p   :   probability of spiking
-    f   :   temp vector
-    """
-    tiny = np.exp(-700)
-    for t in xrange(1, winlength):
-        f[:] = W-data[t]
-        ff = 0.
-        for k in xrange(W.shape[0]):
-            ff += f[k]*f[k]
-        ff = np.exp(-0.5*ff*c) + tiny
-        #f = np.exp(-0.5*(y*np.dot(c, y)).sum(0)) + tiny
-        g[:, t] = g[q, t - 1]
-        g[0, t] = (g[1:2 + (N - 1)*(spklength - 1):(spklength - 1), t].sum() + 
-                    g[0, t] - g[0, t - 1]*p.sum())
-        g[1:2 + (N - 1) * (spklength - 1):(spklength - 1), t] = g[0, t - 1] * p
-        g[:, t] = g[:, t]*ff + tiny
-        g[:, t] = g[:, t] / (g[:, t].sum()+tiny)
 
 @numba.autojit(locals={'P': numba.float64,
                        'a': numba.float64,
                        's': numba.float64,
                        'gg': numba.float64[:],
                        'bb': numba.float64[:]})
-def backward(data, W, g, spklength, 
+def backward(data, W, g, spklength,
             winlength, c, q, N, p, b,f):
     tiny = np.exp(-700)
     P = p.sum()
@@ -99,7 +83,7 @@ def backward(data, W, g, spklength,
         a = 0.
         for k in xrange(gg.shape[0]):
             a += p[k]*gg[k]
-        b[0] += a 
+        b[0] += a
         for i in xrange(spklength-1,1+(N-1)*(spklength-1),
                         spklength-1):
             b[i] = b[nb-1]
@@ -109,28 +93,6 @@ def backward(data, W, g, spklength,
         b[:] = b[:] / (s + tiny)
         g[:, t] = g[:, t] * b + tiny
 
-def backward2(data, W, g, spklength, 
-            winlength, c, q, N, p, b,f):
-    tiny = np.exp(-700)
-    P = p.sum()
-    for t in xrange(winlength - 2, -1, -1):
-        f[:] = W - data[t + 1]
-        f[:] = np.exp(-0.5*f*f*c) + tiny
-        b[:] = b*f + tiny
-        for i in xrange(b.shape[0]):
-            b[q[i]] = b[i]
-        b[0] = (1 - P)*b[-1]
-        gg = b[:(N-1)*(spklength - 1) + 1:(spklength - 1)]
-        a = 0.
-        for k in xrange(gg.shape[0]):
-            a += p[k]*gg[k]
-        b[0] += a 
-        b[(spklength - 1):1 + (N - 1)*(spklength - 1):(spklength - 1)] = b[-1]
-        s = 0.
-        for k in xrange(b.shape[0]):
-            s += b[k]
-        b[:] = b / (s + tiny)
-        g[:, t] = g[:, t] * b + tiny
 
 def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,
                 chunksize=10000,debug=False,levels=None,tempPath=None, rseed=None, **kwargs):
