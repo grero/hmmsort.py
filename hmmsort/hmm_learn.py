@@ -649,6 +649,10 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
             test[i] = (x*np.dot(cinv,x)).sum()
         limit = np.median(test)
 
+    if len(np.shape(cinv)) < 2:
+        p_limit = small_thresh/np.sqrt(cinv)
+    else:
+        p_limit = small_thresh*np.sqrt(np.linalg.inv(cinv))
     j = -1
     ind = []
     woe = np.zeros((spkform.shape[0],))
@@ -657,7 +661,8 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
 
     for i in xrange(spkform.shape[0]):
         woe[i] = (spkform[i]*np.dot(cinv,spkform[i])).sum()
-        if woe[i] >= limit*small_thresh:
+        peak = np.abs(spkform[i]).max()
+        if woe[i] >= limit*small_thresh and peak > p_limit:
             j+=1
             new_spkform.append(spkform[i])
             pp.append(p[i])
@@ -677,7 +682,7 @@ def shortenCWD():
     arraystr = cwdstrs[-2]
     sesstr = cwdstrs[-3]
     daystr = cwdstrs[-4]
-    
+
     return daystr + sesstr[-2:] + arraystr[-2:] + chanstr[-3:]
 
 if __name__ == '__main__':
