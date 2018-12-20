@@ -16,7 +16,10 @@
 
 function [mlseq,ll] = hmm_decode(varargin)
 
-Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile',[],'hdf5Path',[],'spikeForms',[],'data',[],'reorder',[],'maxSize',[],'maxCells',30,'DataFile','','samplingRate',[],'fileName',[],'patchLength',[],'prob',[],'cinv',[],'outlierThreshold',4,'parseOutput',0, 'SaveFile', '');
+Args = struct('SourceFile',[],'Channels',[],'save',0,'Group','','hdf5',0,'DescriptorFile',[],'hdf5Path',[],...
+      'spikeForms',[],'data',[],'reorder',[],'maxSize',[],'maxCells',30,'DataFile','','samplingRate',[],...
+      'fileName',[],'patchLength',[],'prob',[],'cinv',[],'outlierThreshold',4,'parseOutput',0, 'SaveFile', '',...
+       '','scrubOverlapPatches',0);
 Args.flags = {'save','hdf5','parseOutput'};
 [Args,varargin] = getOptArgs(varargin,Args);
 % specify file to sort, should consist of:
@@ -307,6 +310,10 @@ try
 
 	% mlseq is an NxT array with the states of all N templates at each time
 	[mlseq,ll] = cutsort(data, spkform, cinv, patchlength, p);
+  if Args.scrubOverlapPatches
+      mlseq = scrubOverlaps(mlseq, cinv, spikeForms,data,4);
+  end
+
 	%save sequence to sorting file; if a source file was used, save to a file consistent with that name
 	if Args.save
 		if ~isempty(Args.SourceFile) || ~isempty(Args.SaveFile)
