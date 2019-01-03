@@ -34,6 +34,25 @@ def test_spikeforms():
         ee = (sSpikeForms[i,0,:]**2).sum()
         ss[i] = d2.sum()/ee
     #accept the result if the deviation is less than 5% of the original spike template energy"
-    assert (ss < 0.05).all() 
+    assert (ss < 0.05).all()
     os.chdir(pwd)
 
+@pytest.mark.order2
+def test_hhdata():
+    pwd = os.getcwd()
+    os.chdir("test")
+    rseed = 1234
+    spikeForms, cinv = hmmsort.hmm_learn.learnTemplatesFromFile("vmhighpass.mat", 1,chunksize=80000, version=3, debug=True,
+                                                                iterations=3, states=45, max_size=800000, min_snr=4.0,
+                                                                maxp=12.0, rseed=rseed, outfile="hmmsort/vmtemplates.hdf5")
+    os.chdir(pwd)
+
+@pytest.mark.order3
+def test_vvdata():
+    pwd = os.getcwd()
+    os.chdir("test")
+    rseed = 1234
+    spikeForms, cinv = hmmsort.hmm_learn.learnTemplatesFromFile("ch29.mat", 1,chunksize=80000, version=3, debug=True,
+                                                                iterations=3, states=45, max_size=800000, min_snr=4.0,
+                                                                maxp=12.0, rseed=rseed, outfile="hmmsort/ch29templates.hdf5")
+    os.chdir(pwd)
