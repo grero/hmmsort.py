@@ -132,7 +132,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
                 sampling_rate = ff["rh/data/analogInfo/SampleRate"][:].flatten()
             elif 'vh2' in ff.keys():
                 data = ff["vh2/data/analogData"][:].flatten()
-                sampling_rate = ff["/data/analogInfo/SampleRate"][:].flatten()
+                sampling_rate = ff["vh2/data/analogInfo/SampleRate"][:].flatten()
             elif "highpassdata" in ff.keys():  # this is a non-object file
                 data = ff["highpassdata/data/data"][:].flatten()
                 sampling_rate = ff["highpassdata/data/sampling_rate"][:].flatten()
