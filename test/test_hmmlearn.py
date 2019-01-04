@@ -51,8 +51,15 @@ def test_hhdata():
     os.chdir("test")
     rseed = 1234
     spikeForms, cinv = hmmsort.hmm_learn.learnTemplatesFromFile("vmhighpass.mat", 1,chunksize=80000, version=3, debug=True,
-                                                                iterations=3, states=45, max_size=800000, min_snr=4.0,
-                                                                maxp=12.0, rseed=rseed, outfile="hmmsort/vmtemplates.hdf5")
+                                                                iterations=3, states=45, max_size=800000, small_thresh=2.0,
+                                                                maxp=12.0, rseed=rseed, peak_thresh=2.0,
+                                                                outfile="hmmsort/vmtemplates.hdf5")
+    ff = h5py.File("vm_templates_master.hdf5", "r")
+    mSpikeForms = ff["spikeForms"][:]
+    sSpikeForms = spikeForms["second_learning"]["after_noise"]["spikeForms"]
+    assert mSpikeForms.shape == sSpikeForms.shape
+    ss = compare_waveforms(mSpikeForms, sSpikeForms)
+    assert (ss < 0.05).all()
     os.chdir(pwd)
 
 @pytest.mark.order3
