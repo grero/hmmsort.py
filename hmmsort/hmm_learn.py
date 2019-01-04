@@ -347,7 +347,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None, sav
         spkform = spikeForms['after_combine']['spikeForms']
         p = spikeForms['after_combine']['p']
     if not 'after_noise' in spikeForms:
-        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('min_snr',4.0))
+        spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',4.0),
+                                  peak_thresh=kwargs.get('peak_thresh', 4.0))
         spikeForms['after_noise'] = {'spikeForms': spkform,'p': p}
         if saveToFile and len(p)>0:
             if not 'after_noise' in outFile:
@@ -412,7 +413,8 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None, sav
         #remove spikes that are too small
         if len(spkform)>0:
             if not 'after_noise' in spikeForms['second_learning']:
-                spkform,p,idx = removeStn(spkform,p,cinv,data,kwargs.get('small_thresh',1))
+                spkform,p,idx = removeStn(spkform,p,cinv,data,small_thresh=kwargs.get('small_thresh',1),
+                                           peak_thresh=kwargs.get('peak_thresh', 1.0))
                 if saveToFile and len(p)>0:
                     if not 'after_noise' in outFile['second_learning']:
                         outFile['second_learning'].create_group('after_noise')
@@ -635,7 +637,7 @@ def removeSparse(spkform,p,splitp):
     p = p[idx]
     return spkform,p
 
-def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
+def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000, peak_thresh=1.0):
     """
     Remove templates that do not exceed the twice the energy of an average noise
     patch
@@ -652,10 +654,11 @@ def removeStn(spkform,p,cinv,data=None,small_thresh=1,nsamples=1000):
             test[i] = (x*np.dot(cinv,x)).sum()
         limit = np.median(test)
 
+    print "Noise limit: %f" % (limit,)
     if len(np.shape(cinv)) < 2:
-        p_limit = small_thresh/np.sqrt(cinv)
+        p_limit = peak_thresh/np.sqrt(cinv)
     else:
-        p_limit = small_thresh*np.sqrt(np.linalg.inv(cinv))
+        p_limit = peak_thresh*np.sqrt(np.linalg.inv(cinv))
     j = -1
     ind = []
     woe = np.zeros((spkform.shape[0],))
@@ -896,7 +899,9 @@ if __name__ == '__main__':
             print "Removing small templates..."
             sys.stdout.flush()
             q = len(p)
-            spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
+            spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T,
+                                       kwargs.get('small_thresh',4.0),
+                                       kwargs.get('peak_thresh', 4.0))
             print "Removed %d small templates.." %( q-len(p),)
             if len(spkforms)>0:
                 try:
@@ -939,7 +944,8 @@ if __name__ == '__main__':
                                                          debug=debug,
                                                          nFileChunks=nchunks, fileChunkId=tid,
                                                          redo=redo,iterations=iterations,
-                                                        tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset, min_snr=min_snr)
+                                                        tempPath=tempPath,initFile=initFile,states=states, max_size=maxSize, offset=offset, small_thresh=min_snr,
+                                                        peak_thresh=min_snr)
             except IOError:
                 sys.stderr.write("Could not read/write to file\n")
                 traceback.print_exc(file=sys.stderr)
