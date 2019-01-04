@@ -7,6 +7,26 @@ import pytest
 
 #download link https://cortex.nus.edu.sg:6949/sharing/cdrEAsNik
 #https://cortex.nus.edu.sg:6949/sharing/Q4YXxbofM
+
+
+def compare_waveforms(mSpikeForms, sSpikeForms):
+    # figure out the relative shift
+    min_pts_m = mSpikeForms[:].argmin(2).flatten()
+    min_pts_s = sSpikeForms.argmin(2).flatten()
+    nstates = mSpikeForms.shape[-1]
+    ss = np.zeros((mSpikeForms.shape[0],))
+    for i in xrange(len(ss)):
+        # find the smallest shift
+        ii = np.argmin([np.abs(sSpikeForms[i, 0, min_pts_s[i]] - mSpikeForms[j, 0, min_pts_m[j]])
+                        for j in xrange(mSpikeForms.shape[0])])
+        ds = min_pts_s[i] - min_pts_m[ii]
+        d = sSpikeForms[i, 0, ds:] - mSpikeForms[ii, 0, :nstates-ds]
+        d2 = d*d
+        ee = (sSpikeForms[i, 0, :]**2).sum()
+        ss[i] = d2.sum()/ee
+    return ss
+
+
 @pytest.mark.order1
 def test_spikeforms():
     pwd = os.getcwd()
@@ -20,19 +40,7 @@ def test_spikeforms():
     mSpikeForms = ff["spikeForms"][:]
     sSpikeForms = spikeForms["second_learning"]["spikeForms"]
     assert mSpikeForms.shape == sSpikeForms.shape
-    #figure out the relative shift
-    min_pts_m = mSpikeForms[:].argmin(2).flatten()
-    min_pts_s = sSpikeForms.argmin(2).flatten()
-    nstates = mSpikeForms.shape[-1]
-    ss = np.zeros((mSpikeForms.shape[0],))
-    for i in xrange(len(ss)):
-        #find the smallest shift
-        ii = np.argmin([np.abs(sSpikeForms[i,0,min_pts_s[i]] - mSpikeForms[j,0,min_pts_m[j]]) for j in xrange(mSpikeForms.shape[0])])
-        ds = min_pts_s[i] - min_pts_m[ii]
-        d = sSpikeForms[i,0, ds:] - mSpikeForms[ii, 0, :nstates-ds]
-        d2 = d*d
-        ee = (sSpikeForms[i,0,:]**2).sum()
-        ss[i] = d2.sum()/ee
+    ss = compare_waveforms(mSpikeForms, sSpikeForms)
     #accept the result if the deviation is less than 5% of the original spike template energy"
     assert (ss < 0.05).all()
     os.chdir(pwd)
