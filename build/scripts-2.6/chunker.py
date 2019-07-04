@@ -1,4 +1,4 @@
-#!/bin/env python2.7
+#!/usr/bin/python
 import argparse
 import os
 import sys

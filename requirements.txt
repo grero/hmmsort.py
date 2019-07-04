@@ -3,4 +3,3 @@ numpy
 numba
 blosc
 scipy
-matplotlib

@@ -1,4 +1,4 @@
-#!/bin/env python2.7
+#!/home/svu/a0126587/anaconda2/bin/python
 import argparse
 import os
 import sys

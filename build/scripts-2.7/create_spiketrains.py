@@ -125,6 +125,10 @@ class ViewWidget(QMainWindow):
 
     def plot_waveforms(self, waveforms):
         ax = self.figure.axes[0]
+<<<<<<< Updated upstream
+        for i in xrange(waveforms.shape[0]):
+            p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
+=======
         sd = 4
         noise = sd*math.sqrt(1/self.cinv) # calculates standard deviation
         if (self.ishdf5 == True):
@@ -139,6 +143,7 @@ class ViewWidget(QMainWindow):
                 ax.axhline(y=noise, color='k')
                 ax.axhline(y=-noise, color='k')
                 p = ax.plot(waveforms[i, 0, :], label="Waveform %d" % (i, ), picker=5)
+>>>>>>> Stashed changes
         ax.legend()
 
     def save_spiketrains(self):
@@ -169,9 +174,7 @@ class ViewWidget(QMainWindow):
                 iidx, = np.where(uidx == tt)
                 tot_timestamps.append(tidx[iidx]*1000/self.sampling_rate)
             saveind_idx = list(set(template_idx) - set(merge_idx)) # only waveforms to save individually
-
-            if self.ishdf5==True:
-                self.waveforms = np.transpose(self.waveforms)
+            
             if merge_idx:
             	for i in merge_idx:
             		idx = merge_idx.index(i)
@@ -191,17 +194,17 @@ class ViewWidget(QMainWindow):
             	self.counter += 1
 
             if saveind_idx:
-                for i in saveind_idx:
-                    idx = template_idx.index(i)
-                    timestamps = tot_timestamps[idx][0].tolist()
-                    cname = "cell%02d" % (self.counter+1, )
-                    cdir = os.path.join(os.path.dirname(self.sortfile), cname)
-                    if not os.path.isdir(cdir):
-                        os.mkdir(cdir)
-                    fname = cdir + os.path.sep + "spiketrain.mat"
-                    mio.savemat(fname, {"timestamps": timestamps,
-                                        "spikeForm": self.waveforms[i, :, :]})
-                    self.counter += 1
+            	for i in saveind_idx:
+            		idx = template_idx.index(i)
+                	timestamps = tot_timestamps[idx][0].tolist()
+                	cname = "cell%02d" % (self.counter+1, )
+                	cdir = os.path.join(os.path.dirname(self.sortfile), cname)
+                	if not os.path.isdir(cdir):
+                		os.mkdir(cdir)
+                	fname = cdir + os.path.sep + "spiketrain.mat"
+                	mio.savemat(fname, {"timestamps": timestamps,
+                                    	"spikeForm": self.waveforms[i, :, :]})
+                	self.counter += 1
 
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
@@ -237,6 +240,13 @@ class ViewWidget(QMainWindow):
                     self.ishdf5 = True
                     ff = h5py.File(f, "r")
                     self.waveforms = ff["spikeForms"][:]
+<<<<<<< Updated upstream
+                    pp = ff["p"][:]
+                    self.plot_waveforms(self.waveforms, pp)
+                    ff.close()
+
+def plot_waveforms(waveforms, pp):
+=======
                     ff.close()
                 else:
                     self.ishdf5 = False
@@ -251,6 +261,7 @@ class ViewWidget(QMainWindow):
         self.plot_waveforms(self.waveforms)
 
 def plot_waveforms(waveforms):
+>>>>>>> Stashed changes
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.spines["top"].set_visible(False)

@@ -3,11 +3,9 @@ import hmmsort.hmm_learn
 import h5py
 import os
 import numpy as np
-import pytest
 
 #download link https://cortex.nus.edu.sg:6949/sharing/cdrEAsNik
 #https://cortex.nus.edu.sg:6949/sharing/Q4YXxbofM
-@pytest.mark.order1
 def test_spikeforms():
     pwd = os.getcwd()
     os.chdir("test")

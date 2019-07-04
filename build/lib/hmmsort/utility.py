@@ -133,7 +133,7 @@ def backward2(data, W, g, spklength,
         g[:, t] = g[:, t] * b + tiny
 
 def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=True,states=60,
-                chunksize=10000,debug=False,levels=None,tempPath=None, rseed=None, **kwargs):
+                chunksize=10000,debug=False,levels=None,tempPath=None,**kwargs):
     """
     This function runs the baum-welch algorithm on the specified data, learning spiking templates. The input data should have dimensions of datapts X channels. This code runs on the data in chunks, offloading data to disk when not in use. This allows it to analyse arbitrarily long sequences of data.
     """
@@ -142,8 +142,6 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     levels = data.shape[1]
     if np.all(spkform == None):
         neurons = 8
-        if rseed is not None:
-            np.random.seed(rseed)
         amp = np.random.random(size=(neurons,levels))+0.5
         #amp = amp/amp.max(1)[:, None]
         spkform = np.concatenate((np.zeros((levels, prestates)),
@@ -225,9 +223,13 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         break
                 if kk == 100:
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not create temporary file after 100 tries.\n")
-                        sys.stderr.flush()
+                        print"""Could not create temporary file after 100 tries."""
+                        sys.stdout.flush()
+<<<<<<< Updated upstream
+                        sys.exit(bw+11)
+=======
                         sys.exit(11)
+>>>>>>> Stashed changes
                     else:
                         raise IOError('Could not create temporary file')
                 files[i] = fid.name
@@ -279,9 +281,14 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space\n")
-                        sys.stderr.flush()
+                        print """Could not save temporary file, most likely because of
+                        lack of disk space"""
+                        sys.stdout.flush()
+<<<<<<< Updated upstream
+                        sys.exit(bw+22)
+=======
                         sys.exit(99)
+>>>>>>> Stashed changes
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
@@ -326,9 +333,13 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         break
                 if kk == 100:
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not open temporary file after 100 tries.\n")
-                        sys.stderr.flush()
+                        print"""Could not open temporary file after 100 tries."""
+                        sys.stdout.flush()
+<<<<<<< Updated upstream
+                        sys.exit(bw+33)
+=======
                         sys.exit(11)
+>>>>>>> Stashed changes
                     else:
                         raise IOError('Could not open temporary file')
 
@@ -360,9 +371,14 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 if kk == 100:
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
-                        sys.stderr.write("Could not save temporary file, most likely because of lack of disk space.\n")
-                        sys.stderr.flush()
+                        print """Could not save temporary file, most likely because of
+                        lack of disk space"""
+                        sys.stdout.flush()
+<<<<<<< Updated upstream
+                        sys.exit(bw+44)
+=======
                         sys.exit(99)
+>>>>>>> Stashed changes
                     else:
                         #raise an IO error
                         raise IOError('Could not save temporary file')
