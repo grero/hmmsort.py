@@ -1,0 +1,10 @@
+* text=auto
+
+*.c text
+*.h text
+*.txt text
+*.m text
+*.py text
+*.sh text
+
+*.sln text eol=lf
