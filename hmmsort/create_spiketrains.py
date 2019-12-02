@@ -88,6 +88,7 @@ class ViewWidget(QMainWindow):
         self.picked_lines = []
         self.sampling_rate = -1.0
         self.counter = 0
+        self.cinv = None
 
     def addto_array(self, merged, new):
         merged.extend(new[0])
@@ -239,6 +240,8 @@ class ViewWidget(QMainWindow):
                     ff = h5py.File(f, "r")
                     self.waveforms = ff["spikeForms"][:]
                     self.nstates = self.waveforms.shape[0]
+                    if "cinv" in ff:
+                        self.cinv = ff["cinv"][:]
                     ff.close()
                 else:
                     self.ishdf5 = False
@@ -246,13 +249,14 @@ class ViewWidget(QMainWindow):
                     self.waveforms = ff["spikeForms"]
                     self.nstates = self.waveforms.shape[-1]
         cwd = os.getcwd()
-        if not os.path.isfile(cinv_fname):
-            os.chdir("hmmsort")
-        if not os.path.isfile(cinv_fname):
-            return
-        cinv_file = h5py.File(cinv_fname, "r")
-        self.cinv = cinv_file["cinv"][:]
-        cinv_file.close()
+        if self.cinv is None:
+            if not os.path.isfile(cinv_fname):
+                os.chdir("hmmsort")
+            if not os.path.isfile(cinv_fname):
+                return
+            cinv_file = h5py.File(cinv_fname, "r")
+            self.cinv = cinv_file["cinv"][:]
+            cinv_file.close()
         os.chdir(cwd)
         self.plot_waveforms(self.waveforms)
 
