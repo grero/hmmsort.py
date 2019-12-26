@@ -10,7 +10,7 @@ setup(name='hmmsort',
     packages=['hmmsort'],
     install_requires=['numpy',
                       'numba',
-                      'python-blosc']
+                      'python-blosc'],
     scripts=['hmmsort/hmm_learn.py',
              'hmmsort/create_spiketrains.py',
              'hmmsort/chunker.py',
