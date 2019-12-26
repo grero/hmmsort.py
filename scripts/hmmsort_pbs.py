@@ -61,7 +61,7 @@ if __name__ == '__main__':
             fo.write("#PBS -l walltime=24:00:00\n")
             fo.write("#PBS -l mem=6GB\n")
             fo.write("cd %s\n" %(dd,))
-            fo.write("%s/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(execdir,fn))
+            fo.write("%s/hmm_learn.py --sourceFile %s --iterations 3 " %(execdir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
 	    fo.write("--min_snr 4.0 ")
             # get current username instead of hardcoding username
