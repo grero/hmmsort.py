@@ -27,9 +27,6 @@ def level(cwd):
 if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], '', longopts=['dry-run'])
     dopts = dict(opts)
-    if len(args) == 0:
-        print "Usage: hmmsort_pbs.py [ --dry-run ]"
-        sys.exit(0)
     thislevel = level(os.getcwd())
     # get all highpass datafiles
     levelidx = levels.index(thislevel)
