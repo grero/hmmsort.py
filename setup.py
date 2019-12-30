@@ -3,7 +3,7 @@ from distutils.core import setup,Extension
 import numpy
 
 setup(name='hmmsort',
-    version='0.5',
+    version='0.6.0',
     description='Python Npt tools',
     author='Roger Herikstad',
     author_email='roger.herikstad@gmail.com',

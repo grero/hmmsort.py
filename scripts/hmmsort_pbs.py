@@ -68,6 +68,8 @@ if __name__ == '__main__':
             fo.write("--max_size 1000000 --tempPath /hpctmp2/%s/tmp/\n" %(getpass.getuser()))
 
         if not "--dry-run" in dopts.keys():
+            fii = open("sorting_inprogress","w")
+            fii.close().
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
 
         with open(fname_decode,"w") as fo:
@@ -86,6 +88,8 @@ if __name__ == '__main__':
             fo.write("%s/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile %s Group 1 " %(execdir,fn))
             fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5 ")
             fo.write("SaveFile hmmsort.mat hdf5path after_noise\n")
+            fo.write("rm sorting_inprogress\n")
+            fo.write("touch sorting_done\n")
 
         if not "--dry-run" in dopts.keys():
              jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
