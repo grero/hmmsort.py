@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
         if not "--dry-run" in dopts.keys():
             fii = open("sorting_inprogress","w")
-            fii.close().
+            fii.close()
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
 
         with open(fname_decode,"w") as fo:
