@@ -75,11 +75,11 @@ if __name__ == '__main__':
         with open(fname_decode,"w") as fo:
              # request more memory as some decode jobs were being killed for
              # exceeding the default 4 GB
-            fo.write("#PBS -l mem=10GB\n")
+            fo.write("#PBS -q parallel8\n")
             # commenting out next line as it does not seem necessary
             # and because I would like to keep the jobid for hmm_learn on the
             # 3rd line since some scripts are expecting that
-            # fo.write("#PBS -l nodes=1:ppn=1\n")
+            fo.write("#PBS -l select=1:ncpus=8:mem=10GB\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
             fo.write("#PBS -l walltime=48:00:00\n")
             if not "--dry-run" in dopts.keys():
