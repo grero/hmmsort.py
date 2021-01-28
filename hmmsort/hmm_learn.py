@@ -317,8 +317,12 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None, sav
                                                      'p': p}
 
     if not 'all' in spikeForms:
+        ss, mm = extraction.computeStd(data.T, 4)
+        ss = ss/4
+        ss = ss*ss
+        cinv = 1.0/ss
         data,spkform,p,cinv = learnf(data,iterations=iterations,debug=debug,
-                                     levels=data.shape[1],**kwargs)
+                                     levels=data.shape[1],cinv=cinv, **kwargs)
         try:
             outFile['cinv'] = cinv
         except:
