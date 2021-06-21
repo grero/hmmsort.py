@@ -40,7 +40,7 @@ if __name__ == '__main__':
     # get all highpass datafiles
     levelidx = levels.index(thislevel)
     if levelidx == len(levels)-1:
-        bb = "." 
+        bb = "."
         ch = 1
     else:
         # construct a pattern for finding all highpass files below this level
@@ -61,7 +61,7 @@ if __name__ == '__main__':
         fn = pp[-1]
         # change directories so that the output and error files will be created
         # in the respective channel directores and will be easier to check on
-        # the status of the sorting 
+        # the status of the sorting
         os.chdir(dd)
         with open(fname_learn,"w") as fo:
             fo.write("#PBS -l nodes=1:ppn=1\n")
