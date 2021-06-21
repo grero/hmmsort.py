@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/home/svu/lsihr/miniconda2/bin/python
 
 import sys
 import os
