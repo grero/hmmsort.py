@@ -22,13 +22,13 @@ def level(cwd):
          #numstr.append('eye')
          ll = pp.strip(''.join(numstr))
      return ll
-        
+
 
 if __name__ == '__main__':
-    opts, args = getopt.getopt(sys.argv[1:], '', longopts=['dry-run']) 
+    opts, args = getopt.getopt(sys.argv[1:], '', longopts=['dry-run','jobids='])
     dopts = dict(opts)
     if len(args) == 0:
-        print "Usage: hmmsort_pbs.py [ --dry-run ] <execroot>"
+        print "Usage: hmmsort_pbs.py [ --dry-run ] [--jobisd=jid1,jid2,...] <execroot>"
         sys.exit(0)
     if os.path.isfile("sorting_done") or os.path.isfile("sorting_inprogress"):
 	sys.stdout.write("In progress. Skipping...\n")
