@@ -68,6 +68,9 @@ if __name__ == '__main__':
             # increased request for CPU hours to make sure even long jobs will be able to complete
             fo.write("#PBS -l walltime=24:00:00\n")
             fo.write("#PBS -l mem=6GB\n")
+	    fo.write("#PBS -q serial\n")
+	    if "--jobids" in dopts.keys():
+		fo.write("#PBS -W depend:afterok:%s\n" %( dopt["--jobids"].replace(",",";")),)
             fo.write("cd %s\n" %(dd,))
             fo.write("%s/anaconda2/bin/hmm_learn.py --sourceFile %s --iterations 3 --version 3 " %(homedir,fn))
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
