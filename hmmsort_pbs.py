@@ -43,6 +43,7 @@ if __name__ == '__main__':
     homedir = os.path.expanduser('~')
     # save current directory path since we will be changing directories later
     currentdir = os.getcwd();
+    execdir,py = os.path.split(sys.executable)
     for i,f in enumerate(files):
         fname_learn = "learn_job%.4d.pbs" %(i,)
         fname_decode = "decode_job%.4d.pbs" %(i,)
