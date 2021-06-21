@@ -84,7 +84,7 @@ if __name__ == '__main__':
             jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
 
         with open(fname_decode,"w") as fo:
-             # request more memory as some decode jobs were being killed for 
+             # request more memory as some decode jobs were being killed for
              # exceeding the default 4 GB
             fo.write("#PBS -l mem=10GB\n")
             # commenting out next line as it does not seem necessary
