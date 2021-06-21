@@ -106,13 +106,4 @@ if __name__ == '__main__':
 
         if not "--dry-run" in dopts.keys():
              jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
-	with open("sorting_cleanup.txt","w") as fr:
-	    fr.write("#PBS -q serial\n")
-            if not "--dry-run" in dopts.keys():
-                fr.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
-            fr.write("cd %s\n" %(dd,))
-            fr.write("rm sorting_inprogress\n")
-	    fr.write("touch sorting_done\n")
-	if not "--dry-run" in dopts.keys():
-             jobid = subprocess.check_output(['/opt/pbs/bin/qsub',"sorting_cleanup.txt"]).strip()
     sys.exit(0)
