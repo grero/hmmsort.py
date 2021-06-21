@@ -89,7 +89,7 @@ if __name__ == '__main__':
 	    fo.write("#!/bin/bash\n")
             fo.write("#PBS -l mem=10GB\n")
             # commenting out next line as it does not seem necessary
-            # and because I would like to keep the jobid for hmm_learn on the 
+            # and because I would like to keep the jobid for hmm_learn on the
             # 3rd line since some scripts are expecting that
             # fo.write("#PBS -l nodes=1:ppn=1\n")
             # increased request for CPU hours to make sure even long jobs will be able to complete
