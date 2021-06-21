@@ -76,7 +76,7 @@ if __name__ == '__main__':
             fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
 	    fo.write("--min_snr 4.0 ")
             # get current username instead of hardcoding username
-            fo.write("--max_size 1000000 --tempPath /hpctmp2/%s/tmp/\n" %(getpass.getuser()))
+            fo.write("--max_size 1000000 --tempPath /hpctmp/%s/tmp/\n" %(getpass.getuser()))
 
         if not "--dry-run" in dopts.keys():
 	    fii = open("sorting_inprogress","w")
