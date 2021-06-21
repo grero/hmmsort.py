@@ -10,5 +10,6 @@ setup(name='hmmsort',
     packages=['hmmsort'],
     scripts=['hmmsort/hmm_learn.py', 
              'hmmsort/create_spiketrains.py',
-             'hmmsort/chunker.py']
+             'hmmsort/chunker.py',
+			 'hmmsort_pbs.py']
 )
