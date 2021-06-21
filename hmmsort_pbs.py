@@ -37,6 +37,7 @@ if __name__ == '__main__':
         # construct a pattern for finding all highpass files below this level
         bb = os.sep.join([levels[i]+"*" for i in xrange(levelidx+1,len(levels))])
         ch = None
+    queue = dopts.get("-q","flexi")
     bb = os.sep.join([bb] + ["*highpass.mat"])
     files = glob.glob(bb)
     homedir = os.path.expanduser('~')
