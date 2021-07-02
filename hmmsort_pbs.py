@@ -87,6 +87,7 @@ if __name__ == '__main__':
 			 # request more memory as some decode jobs were being killed for
 			 # exceeding the default 4 GB
 			fo.write("#!/bin/bash\n")
+			fo.write("#PBS -N decode\n")
 			if queue is "flexi":
 				# commenting out next line as it does not seem necessary
 				# and because I would like to keep the jobid for hmm_learn on the
