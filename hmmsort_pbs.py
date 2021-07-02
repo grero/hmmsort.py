@@ -107,6 +107,8 @@ if __name__ == '__main__':
 				fo.write("#PBS -q short\n")
 				fo.write("#PBS -l select=1:ncpus=1:mem=30GB\n")
 			fo.write("#PBS -l walltime=24:00:00\n")
+			fo.write("#PBS -o {}\n".format(os.path.join(dd, "decode.o")))
+			fo.write("#PBS -e {}\n".format(os.path.join(dd, "decode.e")))
 		  # increased request for CPU hours to make sure even long jobs will be able to complete
 			if not "--dry-run" in dopts.keys():
 				fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
