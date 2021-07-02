@@ -97,6 +97,7 @@ if __name__ == '__main__':
 			elif queue is "serial":
 				fo.write("#PBS -q serial\n")
 				fo.write("#PBS -l mem=30GB\n")
+				fo.write("#PBS -l select=1:ncpus=1:mem=30GB")
 				fo.write("#PBS -l walltime=128:00:00\n")
 			elif queue is "parallel12":
 				fo.write("#PBS -q parallel12\n")
@@ -104,7 +105,7 @@ if __name__ == '__main__':
 				fo.write("#PBS -l walltime=48:00:00\n")
 			else:
 				fo.write("#PBS -q short\n")
-				fo.write("#PBS -l mem=30GB\n")
+				fo.write("#PBS -l select=1:ncpus=1:mem=30GB\n")
 			fo.write("#PBS -l walltime=24:00:00\n")
 		  # increased request for CPU hours to make sure even long jobs will be able to complete
 			if not "--dry-run" in dopts.keys():
