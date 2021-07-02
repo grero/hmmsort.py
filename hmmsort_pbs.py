@@ -62,10 +62,15 @@ if __name__ == '__main__':
 		# the status of the sorting
 		os.chdir(dd)
 		with open(fname_learn,"w") as fo:
-			fo.write("#PBS -l nodes=1:ppn=1\n")
+			fo.write("#!/bin/bash\n")
+			fo.write("#PBS -l select=1:ncpus=1:mem=6GB\n")
 			# increased request for CPU hours to make sure even long jobs will be able to complete
 			fo.write("#PBS -l walltime=24:00:00\n")
-			fo.write("#PBS -l mem=6GB\n")
+			fo.write("np=$( cat  ${PBS_NODEFILE} |wc -l );\n")
+			fo.write("source /etc/profile.d/rec_modules.sh\n")
+			fo.write("module load miniconda\n")
+			fo.write("bash\n")
+			fo.write(". ~/.bashrc\n")
 			fo.write("cd %s\n" %(dd,))
 			fo.write("%s/hmm_learn.py --sourceFile %s --iterations 3 " %(execdir,fn))
 			fo.write("--chunkSize 100000 --outFile hmmsort/spike_templates.hdf5 ")
@@ -81,6 +86,7 @@ if __name__ == '__main__':
 		with open(fname_decode,"w") as fo:
 			 # request more memory as some decode jobs were being killed for
 			 # exceeding the default 4 GB
+			fo.write("#!/bin/bash\n")
 			if queue is "flexi":
 				# commenting out next line as it does not seem necessary
 				# and because I would like to keep the jobid for hmm_learn on the
@@ -102,6 +108,11 @@ if __name__ == '__main__':
 		  # increased request for CPU hours to make sure even long jobs will be able to complete
 			if not "--dry-run" in dopts.keys():
 				fo.write("#PBS -W depend=afterok:%s\n" %(jobid, ))
+			fo.write("source /etc/profile.d/rec_modules.sh\n")
+			fo.write("module load miniconda\n")
+			fo.write("np=$( cat  ${PBS_NODEFILE} |wc -l );\n")
+			fo.write("bash\n")
+			fo.write(". ~/.bashrc\n")
 			fo.write("cd %s\n" %(dd,))
 			fo.write("%s/run_hmm_decode.sh /app1/common/matlab/R2016a/ SourceFile %s Group 1 " %(execdir,fn))
 			fo.write("fileName hmmsort/spike_templates.hdf5 save hdf5 ")
