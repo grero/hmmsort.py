@@ -81,7 +81,7 @@ if __name__ == '__main__':
 			if not "--dry-run" in dopts.keys():
 				fii = open("sorting_inprogress","w")
 				fii.close()
-				jobid = subprocess.check_output(['/opt/pbs/bin/qsub', fname_learn]).strip()
+				jobid = subprocess.check_output(['/bin/bash', '-l', '-c', 'qsub {}'.format(fname_learn)]).strip()
 
 		with open(fname_decode,"w") as fo:
 			 # request more memory as some decode jobs were being killed for
@@ -125,5 +125,5 @@ if __name__ == '__main__':
 			fo.write("touch sorting_done\n")
 
 			if not "--dry-run" in dopts.keys():
-				 jobid = subprocess.check_output(['/opt/pbs/bin/qsub',fname_decode]).strip()
+				 jobid = subprocess.check_output(['/bin/bash', '-l', '-c', 'qsub {}'.format(fname_decode)]).strip()
 	sys.exit(0)
