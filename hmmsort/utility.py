@@ -23,7 +23,7 @@ def testfunc(a):
 @numba.jit(locals={'n': numba.int_})
 def testfunc2(a):
     n = a.shape[0]
-    for i in xrange(a.shape[0]):
+    for i in range(a.shape[0]):
         q = a[i]
         a[i] = a[n-i-1] 
         a[n-i-1]  = q
@@ -33,7 +33,7 @@ def forward(data, W, g, spklength,
             winlength, c, q, N, p,f):
     tiny = np.exp(-700)
     P = p.sum()
-    for t in xrange(1, winlength):
+    for t in range(1, winlength):
         f[:] = W - data[t]
         #ff = 0.
        # for k in xrange(W.shape[0]):
@@ -43,13 +43,13 @@ def forward(data, W, g, spklength,
         g[:, t] = g[q, t - 1]
         gg = g[1:2 + (N - 1)*(spklength - 1):(spklength - 1), t]
         a = 0.
-        for k in xrange(gg.shape[0]):
+        for k in range(gg.shape[0]):
             a += gg[k] 
         g[0, t] = a + g[0, t] - g[0, t - 1]*P
         g[1:2 + (N - 1) * (spklength - 1):(spklength - 1), t] = g[0, t - 1] * p
         g[:, t] = g[:, t]*f + tiny
         a = 0.
-        for k in xrange(g.shape[0]):
+        for k in range(g.shape[0]):
             a += g[k, t]
         g[:, t] = g[:, t] / (a+tiny)
 
@@ -68,10 +68,10 @@ def forward2(data, W, g, spklength,
     f   :   temp vector
     """
     tiny = np.exp(-700)
-    for t in xrange(1, winlength):
+    for t in range(1, winlength):
         f[:] = W-data[t]
         ff = 0.
-        for k in xrange(W.shape[0]):
+        for k in range(W.shape[0]):
             ff += f[k]*f[k]
         ff = np.exp(-0.5*ff*c) + tiny
         #f = np.exp(-0.5*(y*np.dot(c, y)).sum(0)) + tiny
@@ -93,28 +93,28 @@ def backward(data, W, g, spklength,
     P = p.sum()
     bb = np.zeros(b.shape)
     nb = b.shape[0]
-    for t in xrange(winlength - 2, -1, -1):
+    for t in range(winlength - 2, -1, -1):
         f[:] = W - data[t + 1]
         f[:] = np.exp(-0.5*f*f*c) + tiny
         #b[:] = b*f + tiny
-        for i in xrange(b.shape[0]):
+        for i in range(b.shape[0]):
             b[i] = b[i]*f[i] + tiny
         #rearrange
-        for i in xrange(b.shape[0]):
+        for i in range(b.shape[0]):
             bb[q[i]] = b[i]
-        for i in xrange(b.shape[0]):
+        for i in range(b.shape[0]):
             b[i] = bb[i]
         b[0] = (1 - P)*b[nb-1]
         gg = b[:(N-1)*(spklength - 1) + 1:(spklength - 1)]
         a = 0.
-        for k in xrange(gg.shape[0]):
+        for k in range(gg.shape[0]):
             a += p[k]*gg[k]
         b[0] += a 
-        for i in xrange(spklength-1,1+(N-1)*(spklength-1),
+        for i in range(spklength-1,1+(N-1)*(spklength-1),
                         spklength-1):
             b[i] = b[nb-1]
         s = 0.
-        for k in xrange(b.shape[0]):
+        for k in range(b.shape[0]):
             s += b[k]
         b[:] = b[:] / (s + tiny)
         g[:, t] = g[:, t] * b + tiny
@@ -123,21 +123,21 @@ def backward2(data, W, g, spklength,
             winlength, c, q, N, p, b,f):
     tiny = np.exp(-700)
     P = p.sum()
-    for t in xrange(winlength - 2, -1, -1):
+    for t in range(winlength - 2, -1, -1):
         f[:] = W - data[t + 1]
         f[:] = np.exp(-0.5*f*f*c) + tiny
         b[:] = b*f + tiny
-        for i in xrange(b.shape[0]):
+        for i in range(b.shape[0]):
             b[q[i]] = b[i]
         b[0] = (1 - P)*b[-1]
         gg = b[:(N-1)*(spklength - 1) + 1:(spklength - 1)]
         a = 0.
-        for k in xrange(gg.shape[0]):
+        for k in range(gg.shape[0]):
             a += p[k]*gg[k]
         b[0] += a 
         b[(spklength - 1):1 + (N - 1)*(spklength - 1):(spklength - 1)] = b[-1]
         s = 0.
-        for k in xrange(b.shape[0]):
+        for k in range(b.shape[0]):
             s += b[k]
         b[:] = b / (s + tiny)
         g[:, t] = g[:, t] * b + tiny
@@ -190,14 +190,14 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     tiny = np.exp(-700)
     nchunks = int(np.ceil(1.0*data.shape[0]/chunksize))
     chunks = np.append(np.arange(0,data.shape[0],chunksize),[data.shape[0]])
-    chunksizes = np.diff(chunks).astype(np.int)
-    packed_chunksizes = np.zeros((nchunks,),dtype=np.int)
+    chunksizes = np.diff(chunks).astype(int)
+    packed_chunksizes = np.zeros((nchunks,),dtype=int)
     nchunks = len(chunksizes)
     dtf = 0
     dtb = 0
     # the channel directory is being used to create unique tempfile filenames
     scwd = shortenCWD()
-    for bw in xrange(iterations):
+    for bw in range(iterations):
         print("Iteration %d of %d" % (bw + 1, 
                                      iterations))
         sys.stdout.flush()
@@ -217,7 +217,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
         try:
             print("\tRunning forward algorithm...")
             sys.stdout.flush()
-            for i in xrange(nchunks):
+            for i in range(nchunks):
                 print("\t\tAnalyzing chunk %d of %d" % (i+1, nchunks))
                 sys.stdout.flush()
                 np.seterr(under='warn')
@@ -301,7 +301,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             print("\tRunning backward algorithm...")
             sys.stdout.flush()
             G = np.zeros((g.shape[0], )) 
-            for i in xrange(nchunks - 1, -1, -1):
+            for i in range(nchunks - 1, -1, -1):
                 print("\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks))
                 sys.stdout.flush()
                 t1 = time.time()
@@ -383,8 +383,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             t1 = time.time()
             print("Constructing from file chunks...")
             sys.stdout.flush()
-            for i in xrange(nchunks):
-                fid = open(files[i],'r')
+            for i in range(nchunks):
+                fid = open(files[i],'rb')
                 g = blosc.unpack_array(fid.read())
                 fid.close()
                 g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
@@ -400,8 +400,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             t1 = time.time()
             print("Constructing D from file chunks...")
             sys.stdout.flush()
-            for i in xrange(nchunks):
-                fid = open(files[i],'r')
+            for i in range(nchunks):
+                fid = open(files[i],'rb')
                 g = blosc.unpack_array(fid.read())
                 fid.close()
                 g = g.reshape(N*(spklength-1) + 1, chunksizes[i])
@@ -425,7 +425,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
         #we don't need D any more
         del D
         maxamp = np.zeros((len(spkform),))
-        for j in xrange(len(spkform)):
+        for j in range(len(spkform)):
             spkform[j] = np.concatenate(([W[0]],
                                          W[j*(spklength-1)+1:(j+1)*(spklength-1)+1]),
                                         axis=0)
@@ -441,7 +441,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             #guess
             print("\tTrying to split clusters...")
             sys.stdout.flush()
-            for i in xrange(len(spkform)):
+            for i in range(len(spkform)):
                 if p[i] < splitp:
                     #remove template i and replace with template j
                     j = np.where((p>=np.median(p))*
@@ -463,7 +463,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
 
     #del g,fit 
     del g 
-    for j in xrange(len(spkform)):
+    for j in range(len(spkform)):
         spkform[j,:,:-1] = np.concatenate(([W[1]], 
                                            W[j*(spklength-1)+1:(j+1)*(spklength-1)])
                                           ,axis=0)
