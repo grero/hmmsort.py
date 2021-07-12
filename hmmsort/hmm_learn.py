@@ -118,10 +118,10 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
     file that the data file is divide into, and the chunk to process.
     """
     if not os.path.isfile(dataFile):
-        print "File at path %s could not be found " % (dataFile,)
+        print("File at path %s could not be found " % (dataFile,))
         return [], []
 
-    print "Reading data from file %s" %(dataFile, )
+    print("Reading data from file %s" %(dataFile, ))
     # check what kind of file we are dealing with
     fname,ext = os.path.splitext(dataFile)
     if ext == '.mat':
@@ -198,7 +198,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         except IOError:
             #file exists; what do we do?
             sys.stderr.write("An error occurred trying to open the file %s...\n" %(outfile,))
-	    sys.stderr.flush()
+            sys.stderr.flush()
             sys.exit(0)
     if version == 1:
         #compute the covariance matrix of the full data
@@ -208,7 +208,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
         spkforms = []
         p = []
         for i in xrange(nchunks):
-            print "Processing chunk %d of %d..." % (i+1,nchunks)
+            print("Processing chunk %d of %d..." % (i+1,nchunks))
             sys.stdout.flush()
             try:
                 sp,pp,_ = learnTemplates(cdata[i*chunksize:(i+1)*chunksize,:],samplingRate = sampling_rate,**kwargs)
@@ -259,7 +259,7 @@ def learnTemplatesFromFile(dataFile,group=None,channels=None,save=True,outfile=N
             except:
                 pass
     else:
-        print "No spikeforms found"
+        print("No spikeforms found")
 
     #make sure we close the file
     if save:
@@ -312,9 +312,9 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
     if saveToFile:
         try:
             outFile = h5py.File(saveToFile,'a')
-            print "Saving to file %s" % (saveToFile,)
+            print("Saving to file %s" % (saveToFile,))
         except IOError:
-            print "Could not open file %s..." % (saveToFile,)
+            print("Could not open file %s..." % (saveToFile,))
             saveToFile = False
     spikeForms = {}
     if saveToFile:
@@ -363,7 +363,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
         try:
             outFile['cinv'] = cinv
         except:
-            print "Could not save inverse covariance matrix"
+            print("Could not save inverse covariance matrix")
         spikeForms['all'] = {'spikeForms': spkform,'p': p}
         if saveToFile:
             if not 'all' in outFile:
@@ -394,7 +394,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             outFile['after_noise']['p'] = p
             outFile.flush()
         if len(spkform)==0:
-            print "No spikeforms remain after removing those compatible with noise"
+            print("No spikeforms remain after removing those compatible with noise")
             return spikeForms,cinv
     else:
         spkform = spikeForms['after_noise']['spikeForms']
@@ -409,7 +409,7 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
             outFile['after_sparse']['p'] = p
             outFile.flush()
         if len(spkform)==0:
-            print "No spikeforms remain after removing templates that fire too sparsely"
+            print("No spikeforms remain after removing templates that fire too sparsely")
             return spikeForms,cinv
     else:
         spkform = spikeForms['after_sparse']['spikeForms']
@@ -462,9 +462,9 @@ def learnTemplates(data,splitp=None,debug=True,save=False,samplingRate=None,vers
                 p = spikeForms['second_learning']['after_noise']['p']
                 idx = range(len(p))
 
-            print "Included because of sigma: "
+            print("Included because of sigma: ")
             s = ['%d ' %(i,) for i in idx]
-            print s
+            print(s)
             spikeForms['second_learning']['after_noise'] = {'spikeForms':spkform,'p':p}
         if saveToFile:
             outFile.close()
@@ -547,7 +547,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
         #g = np.zeros((N*(spklength-1)+1,winlength))
         #g[0,0] = 1
         #forward
-        print "Running forward algorithm..."
+        print("Running forward algorithm...")
         sys.stdout.flush()
         for t in xrange(1,winlength):
             x = W-data[t,:][:,None]
@@ -560,7 +560,7 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
             g[:,t] = g[:,t]/(g[:,t].sum()+tiny)
 
         #backward
-        print "Running backward algorithm..."
+        print("Running backward algorithm...")
         sys.stdout.flush()
         for t in xrange(winlength-2,-1,-1):
             x = W-data[t+1,:][:,None]
@@ -591,8 +591,8 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
 
         nspikes = p*winlength
 
-        print "Spikes found per template: "
-        print ' '.join((map(lambda s: '%.2f' %s,nspikes)))
+        print("Spikes found per template: ")
+        print(' '.join((map(lambda s: '%.2f' %s,nspikes))))
         sys.stdout.flush()
         if dosplit:
             for i in xrange(len(spkform)):
@@ -603,11 +603,11 @@ def learndbw1(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dospl
                     W[:,i*(spklength-1)+1:(i+1)*(spklength-1)] = W[:,j*(spklength-1)+1:j*(spklength-1)]*.98
                     p[i] = p[j]/2
                     p[j] =p[j]/2
-                    print "Waveformsupdate: %d <- %d" % (i,j)
+                    print("Waveformsupdate: %d <- %d" % (i,j))
                     sys.stdout.flush()
                     break
                     #except:
-                    #    print "Clustersplitting failed"
+                    #    print("Clustersplitting failed")
                     #    sys.stdout.flush()
 
     #del g,fit
@@ -672,8 +672,8 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
     nchunks = len(chunksizes)
     dt = 0
     for bw in xrange(iterations):
-        print "Iteration %d of %d" % (bw,
-                                     iterations)
+        print("Iteration %d of %d" % (bw,
+                                     iterations))
         sys.stdout.flush()
         files = ['']*nchunks
         #fid = tempfile.TemporaryFile(dir=tempPath)
@@ -686,12 +686,12 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
         #note that we are looping over number of states here; the most we are
         #creating is 2Xdata.nbytes
         #forward
-        print "\tRunning forward algorithm..."
+        print("\tRunning forward algorithm...")
         sys.stdout.flush()
         #do this in chunks
         try:
             for i in xrange(nchunks):
-                print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
+                print("\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) )
                 #create one file per chunk; don't delete since we'll need it when we
                 #run the backward sweep
                 fid = tempfile.NamedTemporaryFile(dir=tempPath,prefix=shortenCWD(),delete=False)
@@ -709,8 +709,8 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 t2 = time.time()
                 #compute mean duration iteratively
                 dt = (dt*i+(t2-t1))/(i+1)
-                print "\t\t\tThat took %.2f seconds. ETTG: %.2f" % (t2-t1,
-                (nchunks-(i+1))*dt)
+                print("\t\t\tThat took %.2f seconds. ETTG: %.2f" % (t2-t1,
+                (nchunks-(i+1))*dt))
                 #store to file and reset for the next chunk
                 g = g[:, :chunksizes[i]]
                 #use blosc to compress the chunk
@@ -744,7 +744,7 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                     #if we reach here it means that we could not save the file
                     if __name__ == '__main__':
                         sys.stderr.write("Could not save temporary file, most likely because of lack of disk space\n")
-			sys.stderr.flush()
+                        sys.stderr.flush()
                         sys.exit(99)
                     else:
                         #raise an IO error
@@ -752,11 +752,11 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                 g[:, 0] = g[:, -1]
 
             #backward
-            print "\tRunning backward algorithm..."
+            print("\tRunning backward algorithm...")
             sys.stdout.flush()
             G = np.zeros((g.shape[0], ))
             for i in xrange(nchunks - 1, -1, -1):
-                print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks)
+                print("\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks))
                 #reopen the tempfile corresponding to this chunk
                 fid = open(files[i],'r')
                 a = chunks[i]*(N*(spklength - 1) + 1)
@@ -825,13 +825,13 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
 
         nspikes = p*winlength
 
-        print "\tSpikes found per template: "
-        print ' '.join((map(lambda s: '%.2f' %s,nspikes)))
+        print("\tSpikes found per template: ")
+        print(' '.join((map(lambda s: '%.2f' %s,nspikes))))
         sys.stdout.flush()
         if dosplit:
             #remove templates with too low firing rate and replace with a new
             #guess
-            print "\tTrying to split clusters..."
+            print("\tTrying to split clusters...")
             for i in xrange(len(spkform)):
                 if p[i] < splitp:
                     #remove template i and replace with template j
@@ -844,11 +844,11 @@ def learndbw1v2(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dos
                                                                        1:(j + 1)*(spklength - 1)]*.98
                         p[i] = p[j] / 2
                         p[j] =p[j] / 2
-                        print "\t\tWaveformsupdate: %d <- %d" % (i, j)
+                        print("\t\tWaveformsupdate: %d <- %d" % (i, j))
                         sys.stdout.flush()
                         break
                     except:
-                        print "\t\tClustersplitting failed"
+                        print("\t\tClustersplitting failed")
                         sys.stdout.flush()
 
 
@@ -1027,7 +1027,7 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
             spks-=1
             index,docombine,value = combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha)
 
-        print "Could not combine any more: value %.3f" % (value,)
+        print("Could not combine any more: value %.3f" % (value,))
         sys.stdout.flush()
 
         #shift back
@@ -1118,9 +1118,9 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
 
     #check confidence level
     if maximum > alpha:
-        print "combine spikes, p-value: %.3f" % (maximum,)
-        print "combine spikes, test-value: %.3f" %(teststat[index[0],index[1]],)
-        print "overlapping area: %.3f" %(np.floor(splineform.shape[1]/10.0),)
+        print("combine spikes, p-value: %.3f" % (maximum,))
+        print("combine spikes, test-value: %.3f" %(teststat[index[0],index[1]],))
+        print("overlapping area: %.3f" %(np.floor(splineform.shape[1]/10.0),))
         sys.stdout.flush()
         docombine = 1
     else:
@@ -1206,10 +1206,10 @@ if __name__ == '__main__':
 
         if len(sys.argv) == 1:
             #print help message and quit
-            print """Usage: hmm_learn.py --sourceFile <sourceFile> --group
+            print("""Usage: hmm_learn.py --sourceFile <sourceFile> --group
             <channle number> --outFile <outfile name>  [--chunkSize 100000]
             [--minFiringRate 0.5 ] [--iterations 3] [--version 3] [--initOnly] [--max_size INF] [--maxp 12.0] [--min_snr 4.0] [--states 45]
-            """
+            """)
 
             sys.exit(0)
         opts = dict(opts)
@@ -1248,8 +1248,8 @@ if __name__ == '__main__':
         if states is not None:
             states = int(states)
         if not os.path.isdir(tempPath):
-            print """The Requested tempPath %s does not exist. Reverting to the
-            system default""" % (tempPath,)
+            print("""The Requested tempPath %s does not exist. Reverting to the
+            system default""" % (tempPath,))
             tempPath = None
         #parse the channel input
         channels = None
@@ -1270,7 +1270,7 @@ if __name__ == '__main__':
             descriptorFile = glob.glob('*_descriptor.txt')
             if len(descriptorFile)==0:
                 sys.stderr.write("No descriptpr file found. Exiting..\n")
-		sys.stderr.flush()
+                sys.stderr.flush()
                 sys.exit(3)
             descriptorFile = descriptorFile[0]
             #get the base from the descriptor file
@@ -1298,7 +1298,7 @@ if __name__ == '__main__':
             files = useFiles
             spkforms = np.array(spkforms)
             p = np.array(p)
-            print "Found a total of %d spikeforms..." % (spkforms.shape[0],)
+            print("Found a total of %d spikeforms..." % (spkforms.shape[0],))
 #get descriptor information
             #base = dataFileName[:dataFileName.rfind('_')]
             #descriptorFile = '%s_descriptor.txt' % (dataFileName[:dataFileName.rfind('_')],)
@@ -1369,7 +1369,7 @@ if __name__ == '__main__':
                     alldata = np.memmap('/tmp/%s.all' %(base,),dtype=np.int16,shape=(len(channels),total_size),mode='w+')
                     offset = 0
                     for f in dataFiles:
-                        print "Loading data from file %s..." %(f,)
+                        print("Loading data from file %s..." %(f,))
                         sys.stdout.flush()
                         data,sr = extraction.readDataFile(f)
 
@@ -1378,7 +1378,7 @@ if __name__ == '__main__':
                         alldata.flush()
                         offset+=data.shape[1]
 
-                print "Computing inverse covariance matrix..."
+                print("Computing inverse covariance matrix...")
                 sys.stdout.flush()
                 cinv = np.linalg.pinv(np.cov(alldata))
                 winlen = alldata.shape[1]
@@ -1392,11 +1392,11 @@ if __name__ == '__main__':
 #field already exists
                 pass
 #remove small waveforms
-            print "Removing small templates..."
+            print("Removing small templates...")
             sys.stdout.flush()
             q = len(p)
             spkforms,p,idx = removeStn(spkforms,p,cinv,alldata.T)
-            print "Removed %d small templates.." %( q-len(p),)
+            print("Removed %d small templates.." %( q-len(p),))
             if len(spkforms)>0:
                 try:
                     dataFile.create_group('spikeFormsLarge')
@@ -1407,10 +1407,10 @@ if __name__ == '__main__':
                     #already exists
                     pass
             if len(spkforms)>1:
-                print "Combining templates..."
+                print("Combining templates...")
                 sys.stdout.flush()
                 spkforms,p = combineSpikes(spkforms,p,cinv,winlen,maxp=maxp)
-                print "Left with %d templates .." %(len(p),)
+                print("Left with %d templates .." %(len(p),))
             if len(spkforms)>0:
                 try:
                     dataFile['spikeForms'] = spkforms
@@ -1429,7 +1429,7 @@ if __name__ == '__main__':
                 tlast = int(os.environ.get('SGE_TASK_LAST',0))
                 nchunks = tlast-tfirst+1
                 tid = int(os.environ['SGE_TASK_ID'])-1
-                print "Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid+1)
+                print("Analyzing file %s in %d chunks. Analyzing chunk %d...." %(dataFileName,nchunks,tid+1))
                 sys.stdout.flush()
 
             try:
@@ -1442,7 +1442,7 @@ if __name__ == '__main__':
             except IOError:
                 sys.stderr.write("Could not read/write to file\n")
                 traceback.print_exc(file=sys.stderr)
-		sys.stderr.flush()
+                sys.stderr.flush()
                 sys.exit(99)
     except SystemExit as ee:
         # honour the request to quit by simply re-issuing the call to exit with the correct code
