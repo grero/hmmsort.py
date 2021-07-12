@@ -20,7 +20,7 @@ def first(a):
 def testfunc(a):
     a[:] = a[::-1] 
 
-@numba.autojit(locals={'n': numba.int_})
+@numba.jit(locals={'n': numba.int_})
 def testfunc2(a):
     n = a.shape[0]
     for i in xrange(a.shape[0]):
@@ -28,7 +28,7 @@ def testfunc2(a):
         a[i] = a[n-i-1] 
         a[n-i-1]  = q
 
-@numba.autojit
+@numba.jit
 def forward(data, W, g, spklength, 
             winlength, c, q, N, p,f):
     tiny = np.exp(-700)
@@ -82,7 +82,7 @@ def forward2(data, W, g, spklength,
         g[:, t] = g[:, t]*ff + tiny
         g[:, t] = g[:, t] / (g[:, t].sum()+tiny)
 
-@numba.autojit(locals={'P': numba.float64,
+@numba.jit(locals={'P': numba.float64,
                        'a': numba.float64,
                        's': numba.float64,
                        'gg': numba.float64[:],
