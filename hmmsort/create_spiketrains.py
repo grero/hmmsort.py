@@ -119,8 +119,8 @@ class ViewWidget(QMainWindow):
             self.merged_lines.remove(label)
             self.merged_colors.remove(self.merged_colors[index])
 
-        print "Save individual spiketrains for waveforms: ", self.picked_lines
-        print "Save merged spiketrains for waveforms: ", self.merged_lines
+        print("Save individual spiketrains for waveforms: ", self.picked_lines)
+        print("Save merged spiketrains for waveforms: ", self.merged_lines)
         artist.figure.canvas.draw()
 
     def plot_waveforms(self, waveforms):
@@ -128,13 +128,13 @@ class ViewWidget(QMainWindow):
         sd = 4
         noise = sd*math.sqrt(1/self.cinv) # calculates standard deviation
         if (self.ishdf5 == True):
-            print "this is hdf5"
+            print("this is hdf5")
             for i in xrange(waveforms.shape[2]):
                 ax.axhline(y=noise, color='k')
                 ax.axhline(y=-noise, color='k')
                 p = ax.plot(waveforms[:, 0, i], label="Waveform %d" % (i, ), picker=5)
         else:
-            print "this is not hdf5"
+            print("this is not hdf5")
             for i in xrange(waveforms.shape[0]):
                 ax.axhline(y=noise, color='k')
                 ax.axhline(y=-noise, color='k')
@@ -145,7 +145,7 @@ class ViewWidget(QMainWindow):
         tot_timestamps = []
         num_timestamps = []
         merge_timestamps = [] # for all merged waveforms
-        print "Saving spiketrains"
+        print("Saving spiketrains")
         with SaveFile(self.sortfile) as qq:
             if ("samplingRate" not in qq.keys()) and ("samplingrate" not in qq.keys()):
                 if self.sampling_rate == -1.0:
@@ -172,24 +172,24 @@ class ViewWidget(QMainWindow):
             saveind_idx = list(set(template_idx) - set(merge_idx)) # only waveforms to save individually
             
             if merge_idx:
-            	for i in merge_idx:
-            		idx = merge_idx.index(i)
-            		merge_timestamps = self.addto_array(merge_timestamps, tot_timestamps[idx])
+                for i in merge_idx:
+                    idx = merge_idx.index(i)
+                    merge_timestamps = self.addto_array(merge_timestamps, tot_timestamps[idx])
 
-            	merge_timestamps = list(set(merge_timestamps))
-            	merge_timestamps.sort()
+                merge_timestamps = list(set(merge_timestamps))
+                merge_timestamps.sort()
 
-            	if self.ishdf5 == True:
+                if self.ishdf5 == True:
                     self.waveforms = np.transpose(self.waveforms[:,:,:])
                 merge_waveforms = np.mean(self.waveforms[merge_idx,:,:], axis = 0)
-            	cname = "cell%02d" % (self.counter+1, )
-            	cdir = os.path.join(os.path.dirname(self.sortfile), cname)
-            	if not os.path.isdir(cdir):
-            	    os.mkdir(cdir)
-            	fname = cdir + os.path.sep + "spiketrain.mat"
-            	mio.savemat(fname, {"timestamps": merge_timestamps,
+                cname = "cell%02d" % (self.counter+1, )
+                cdir = os.path.join(os.path.dirname(self.sortfile), cname)
+                if not os.path.isdir(cdir):
+                    os.mkdir(cdir)
+                fname = cdir + os.path.sep + "spiketrain.mat"
+                mio.savemat(fname, {"timestamps": merge_timestamps,
                                     "spikeForm": merge_waveforms})
-            	self.counter += 1
+                self.counter += 1
 
             if saveind_idx:
                 for i in saveind_idx:
