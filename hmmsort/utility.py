@@ -6,7 +6,17 @@ import time
 import blosc
 import os
 
-@numba.autojit
+
+def first(a):
+    if hasattr(a, '__len__'):
+        if len(a) > 0:
+            return a[0]
+        raise(Exception("Input is empty"))
+    else:
+        return a
+
+
+@numba.jit
 def testfunc(a):
     a[:] = a[::-1] 
 
