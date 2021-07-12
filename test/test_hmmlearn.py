@@ -23,9 +23,9 @@ def test_spikeforms():
     min_pts_s = sSpikeForms.argmin(2).flatten()
     nstates = mSpikeForms.shape[-1]
     ss = np.zeros((mSpikeForms.shape[0],))
-    for i in xrange(len(ss)):
+    for i in range(len(ss)):
         #find the smallest shift
-        ii = np.argmin([np.abs(sSpikeForms[i,0,min_pts_s[i]] - mSpikeForms[j,0,min_pts_m[j]]) for j in xrange(mSpikeForms.shape[0])])
+        ii = np.argmin([np.abs(sSpikeForms[i,0,min_pts_s[i]] - mSpikeForms[j,0,min_pts_m[j]]) for j in range(mSpikeForms.shape[0])])
         ds = min_pts_s[i] - min_pts_m[ii]
         d = sSpikeForms[i,0, ds:] - mSpikeForms[ii, 0, :nstates-ds]
         d2 = d*d
