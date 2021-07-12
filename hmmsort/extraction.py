@@ -50,9 +50,6 @@ def readDataFile(fname,headerOnly=False,chunk=None):
                 'headerSize':headersize}
     if chunk is None:
         #create a memory map of the whole file
-        print("headersize: {}".format(util.first(headersize)))
-        print("typeof(headersize): {}".format(type(util.first(headersize))))
-        print("fsize: {}".format(fsize))
         hs = int(util.first(headersize))
         data = np.memmap(fname, offset=hs, dtype=np.int16,
                          mode='r', shape=(int((fsize-hs)/2),))
@@ -69,7 +66,6 @@ def readDataFile(fname,headerOnly=False,chunk=None):
 
         fid.close()
 
-    print("nchs: {}".format(nchs))
     return data.reshape(data.size//nchs, nchs).T, samplingrate
 
 def writeDataFile(fname,data,samplingRate=30000,headerSize=90):
