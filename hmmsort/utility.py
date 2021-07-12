@@ -305,7 +305,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 print("\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks))
                 sys.stdout.flush()
                 t1 = time.time()
-                fid = open(files[i],'r')
+                fid = open(files[i],'rb')
                 g = blosc.unpack_array(fid.read(packed_chunksizes[i]))
                 fid.close()
                 g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
@@ -326,7 +326,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 kk = 0
                 while kk < 100:
                     try:
-                        fid = open(files[i],'w')
+                        fid = open(files[i],'wb')
                     except IOError:
                         kk += 1
                         time.sleep(np.random.random()*30)
