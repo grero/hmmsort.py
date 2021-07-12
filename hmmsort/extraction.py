@@ -168,13 +168,13 @@ def filterFile(fname,chunkSize=None,type='high',samplingRate=None,**kwargs):
         else:
             descriptor = {'channel_status':
                           np.ones((header['channels'],),dtype=np.bool)}
-            print "No descriptor found. Using default..."
+            print("No descriptor found. Using default...")
     #samplingRate = descriptor
     
     if type == 'high':
-        print "Highpass filtering file %s..." % (fname,)
+        print("Highpass filtering file %s..." % (fname,))
     elif type =='low':
-        print "Lowpass filtering file %s..." % (fname,)
+        print("Lowpass filtering file %s..." % (fname,))
         
     idx = np.where(descriptor['channel_status'])[0]
     nchs = np.uint64(len(idx))
@@ -196,7 +196,7 @@ def filterFile(fname,chunkSize=None,type='high',samplingRate=None,**kwargs):
         chunks = np.append(chunks,header['datapts'])
         #get chunkpairs
         chunkPairs = [(chunks[i],chunks[i+1]) for i in xrange(len(chunks)-1)]
-        print "\tBreaking file into %d chunks..." %( nchunks,)
+        print("\tBreaking file into %d chunks..." %( nchunks,))
         sys.stdout.flush()
         #nchunks-=1
         dt = 0
@@ -212,14 +212,14 @@ def filterFile(fname,chunkSize=None,type='high',samplingRate=None,**kwargs):
                 xpsize = ((chunkPairs[i][1]-chunkPairs[i][0])*nchs*2 +
                  90)
                 if ffsize == xpsize:
-                    print "\t\tA file for this chunk already exists. Skipping"
+                    print("\t\tA file for this chunk already exists. Skipping")
                     sys.stdout.flush()
                     continue
                     
             if type == 'high':
-                print "\t\tHighpass filtering chunk %d..." % (i+1,)
+                print("\t\tHighpass filtering chunk %d..." % (i+1,))
             elif type =='low':
-                print "\t\tLowpass filtering chunk %d..." % (i+1,)
+                print("\t\tLowpass filtering chunk %d..." % (i+1,))
             sys.stdout.flush()
             t1 = time.time()
             data,sr = readDataFile(fname,chunk=chunkPairs[i])
@@ -237,7 +237,7 @@ def filterFile(fname,chunkSize=None,type='high',samplingRate=None,**kwargs):
             #upate time average
             dt = (dt*(k) + (t2-t1))/(k+1)
             #output an educated guess of long we have left
-            print "\t\tETTG: %f seconds" %( dt*(nchunks-(i+1)))
+            print("\t\tETTG: %f seconds" %( dt*(nchunks-(i+1))))
             sys.stdout.flush()
             k+=1
 
@@ -252,7 +252,7 @@ def filterFile(fname,chunkSize=None,type='high',samplingRate=None,**kwargs):
                 fdata/=descriptor['gain']
             writeDataFile(outfname,fdata.astype(np.int16),sr)
         else:
-            print "File %s already exists. Skipping.." % (outfname,)
+            print("File %s already exists. Skipping.." % (outfname,))
 
 def computeStd(data,stdFactor=6):
     """Computes the noise of the data using two steps;
@@ -388,7 +388,7 @@ def extractSpikesForSeesion(path=None,sessionName=None,spikeshapes=None,timestam
     if sessionName is None:
         #get session name
         sessionName = utility.getSessionName(path)
-    print 'Extracting spikes for session %s' % (sessionName,)
+    print('Extracting spikes for session %s' % (sessionName,))
     sys.stdout.flush()
     #get he file header
     fname = '%s.bin' %(sessionName,)
@@ -451,10 +451,10 @@ def extractSpikesForSeesion(path=None,sessionName=None,spikeshapes=None,timestam
             #first load each file and compute the extraction threshold
             thresholdsFile = '%s.thresholds' %(sessionName,)
             if os.path.isfile(thresholdsFile):
-                print "\tPrevious thresholds file %s" %(thresholdsFile,)
+                print("\tPrevious thresholds file %s" %(thresholdsFile,))
                 threshold = np.loadtxt(thresholdsFile).flatten()
             else:
-                print "\tEstimating extraction threshold..."
+                print("\tEstimating extraction threshold...")
                 sys.stdout.flush()
                 x = np.zeros((header['channels'],))
                 x2 = np.zeros((header['channels'],))
@@ -472,37 +472,37 @@ def extractSpikesForSeesion(path=None,sessionName=None,spikeshapes=None,timestam
                 x = x/N
                 x2 = x2/N
                 threshold = stdFactor*np.sqrt(x2-x**2)
-                print "\tSaving thresholds to file %s" % (thresholdsFile,)
+                print("\tSaving thresholds to file %s" % (thresholdsFile,))
                 np.savetxt(thresholdsFile,threshold)
-            print threshold
-            print "\tExtracting using a mean threshold of %f..." % (threshold.mean(),)
+            print(threshold)
+            print("\tExtracting using a mean threshold of %f..." % (threshold.mean(),))
             sys.stdout.flush()
             #loop through each file, extracting spikes as we go
             #TODO: this really should be parallelized 
             #do the first file first
             hf = highpassFiles[0]
             #get the data as well as the sampling rate
-            print "\tLoading data from file %s" %(hf,)
+            print("\tLoading data from file %s" %(hf,))
             sys.stdout.flush()      
             #for timing of reads
             t1 = time.time()
             data,sr = readDataFile(hf) 
             t2 = time.time()
             dataReadTime.append(t2-t1)
-            print "\tThat took %f seconds" % (t2-t1,)
+            print("\tThat took %f seconds" % (t2-t1,))
             sys.stdout.flush()      
-            print '\t\tExtracting spikes'
+            print('\t\tExtracting spikes')
             sys.stdout.flush()      
             t1 = time.time()
             for g in groups:
                 chs = np.where(groupNr==g)[0]
-                print '\t\t\tExtracting spikes for group %d channels %s...' %(g,
-                                                                              ' '.join((map(str,chs))))
+                print('\t\t\tExtracting spikes for group %d channels %s...' %(g,
+                                                                              ' '.join((map(str,chs)))))
                 sys.stdout.flush()
                 spikeshapes[g],timestamps[g],thresholds[g],means[g] = extract(data[chs,:],
                                                                               threshold=threshold[chs],**kwargs)
-                print "\t\t\t\tExtracted %d spikes exceeding %f" %(
-                    spikeshapes[g].shape[0],thresholds[g])
+                print("\t\t\t\tExtracted %d spikes exceeding %f" %(
+                    spikeshapes[g].shape[0],thresholds[g]))
                 if reorder is not None:
                     #we need to reorder the channels such that within the
                     #virtual tetrode
@@ -519,29 +519,29 @@ def extractSpikesForSeesion(path=None,sessionName=None,spikeshapes=None,timestam
             #set an offset such that the timepoints are offset correctly
             t2 = time.time()
             extractionTime.append(t2-t1)
-            print "\t\tThat took %f seconds" % (t2-t1,)
+            print("\t\tThat took %f seconds" % (t2-t1,))
             sys.stdout.flush()      
             offset = data.shape[1]
             for i in xrange(1,nFiles):
                 hf = highpassFiles[i]
 
                 #get the data as well as the sampling rate
-                print "\tLoading data from file %s" %(hf,)
+                print("\tLoading data from file %s" %(hf,))
                 sys.stdout.flush()
                 del data
                 t1 = time.time()
                 data,sr = readDataFile(hf) 
                 t2 = time.time()
                 dataReadTime.append(t2-t1)
-                print "\tThat took %f seconds" % (t2-t1,)
+                print("\tThat took %f seconds" % (t2-t1,))
                 sys.stdout.flush()
-                print '\t\tExtracting spikes'
+                print('\t\tExtracting spikes')
                 sys.stdout.flush()
                 t1 = time.time()
                 for g in groups:
                     chs = np.where(groupNr==g)[0]
-                    print '\t\t\tExtracting spikes for group %d channels %s...' %(g,
-                                                                                  ' '.join((map(str,chs))))
+                    print('\t\t\tExtracting spikes for group %d channels %s...' %(g,
+                                                                                  ' '.join((map(str,chs)))))
                     sys.stdout.flush()
                     _spikeshapes,_timepoints,_thresholds,_means = extract(data[chs,:],
                                                                           threshold=threshold[chs],**kwargs)
@@ -569,28 +569,28 @@ def extractSpikesForSeesion(path=None,sessionName=None,spikeshapes=None,timestam
                         else:
                             spikeshapes[g] = _spikeshapes
                             timestamps[g] = _timepoints
-                        print "\t\t\t\tExtracted %d spikes exceeding %f" %(
-                            _spikeshapes.shape[0],_thresholds)
+                        print("\t\t\t\tExtracted %d spikes exceeding %f" %(
+                            _spikeshapes.shape[0],_thresholds))
                         sys.stdout.flush()
                         thresholds[g] = np.vstack((thresholds[g],_thresholds))
                         means[g] = np.vstack((means[g],_means))
                 #update the offset for the new iteration    
                 t2 = time.time()
                 extractionTime.append(t2-t1)
-                print "\t\tThat took %f seconds" % (t2-t1,)
-                print "\t ETA: %f seconds" %((np.mean(extractionTime) +
-                                   np.mean(dataReadTime))*(nFiles-(i-2)),)
+                print("\t\tThat took %f seconds" % (t2-t1,))
+                print("\t ETA: %f seconds" %((np.mean(extractionTime) +
+                                   np.mean(dataReadTime))*(nFiles-(i-2)),))
                 sys.stdout.flush()
                 offset += data.shape[1] 
     else:
-        print 'No highpass files found'
-    print "Average read time per file: %f" %(np.mean(dataReadTime),)
-    print "Average extraction time per file: %f" % (np.mean(extractionTime),)
+        print('No highpass files found')
+    print("Average read time per file: %f" %(np.mean(dataReadTime),))
+    print("Average extraction time per file: %f" % (np.mean(extractionTime),))
     if samplingRate is None:
         samplingRate = sr
     if save:
         #save the spikes and timestamps for each of the groups
-        print "Saving waveforms files"
+        print("Saving waveforms files")
         sys.stdout.flush()
         saveWaveformsFiles(spikeshapes,timestamps,sessionName,
                            samplingRate=samplingRate)
@@ -614,7 +614,7 @@ def saveWaveformsFiles(spikeshapes,timestamps,sessionName,basedir=None,
             except IOError:
                 fw.writeWaveformsFile(spikeshapes[g],timestamps[g],'%s/%sg%.4dwaveforms.bin'
                                          %('/tmp',sessionName,g),conversion=samplingRate)
-                print "Could not save waveforms file %s to directory %s. Saved to /tmp/ instead" %(waveformsFile,basedir)
+                print("Could not save waveforms file %s to directory %s. Saved to /tmp/ instead" %(waveformsFile,basedir))
             if thresholds is not None and means is not None:
                 pass
 
