@@ -188,8 +188,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
     # the channel directory is being used to create unique tempfile filenames
     scwd = shortenCWD()
     for bw in xrange(iterations):
-        print "Iteration %d of %d" % (bw + 1, 
-                                     iterations)
+        print("Iteration %d of %d" % (bw + 1, 
+                                     iterations))
         sys.stdout.flush()
         W = W.flatten()
         # fid = tempfile.TemporaryFile(dir=tempPath,prefix=scwd)
@@ -205,10 +205,10 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
         #creating is 2Xdata.nbytes
         #forward
         try:
-            print "\tRunning forward algorithm..."
+            print("\tRunning forward algorithm...")
             sys.stdout.flush()
             for i in xrange(nchunks):
-                print "\t\tAnalyzing chunk %d of %d" % (i+1, nchunks) 
+                print("\t\tAnalyzing chunk %d of %d" % (i+1, nchunks))
                 sys.stdout.flush()
                 np.seterr(under='warn')
                 t1 = time.time()
@@ -219,7 +219,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     except IOError:
                         kk += 1
                         time.sleep(np.random.random()*30)
-                        print """Could not create tempfile. Retrying ... """
+                        print("""Could not create tempfile. Retrying ... """)
                         sys.stdout.flush()
                     else:
                         break
@@ -245,8 +245,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 t2 = time.time()
                 #compute average duration
                 dtf = (dtf*i + (t2 - t1))/(i + 1)
-                print "That took %.2f seconds. ETTG: %.2f" %(t2-t1,
-                                                             dtf*(nchunks-(i + 1)))
+                print("That took %.2f seconds. ETTG: %.2f" %(t2-t1,
+                                                             dtf*(nchunks-(i + 1))))
                 sys.stdout.flush()
                 g = g[:, :chunksizes[i]]
                 gp = blosc.pack_array(g)
@@ -264,7 +264,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         happens, just report the exception and let sge know an error
                         occured
                         """
-                        print """Could not write to file. Retrying ... """
+                        print("""Could not write to file. Retrying ... """)
                         sys.stdout.flush()
                         kk += 1
                         time.sleep(np.random.random()*30)
@@ -288,11 +288,11 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 g[:, 0] = g[:, -1]
 
             #backward
-            print "\tRunning backward algorithm..."
+            print("\tRunning backward algorithm...")
             sys.stdout.flush()
             G = np.zeros((g.shape[0], )) 
             for i in xrange(nchunks - 1, -1, -1):
-                print "\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks) 
+                print("\t\tAnalyzing chunk %d of %d" % (i + 1, nchunks))
                 sys.stdout.flush()
                 t1 = time.time()
                 fid = open(files[i],'r')
@@ -303,8 +303,8 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         chunksizes[i], cinv, q, N, p, b, f)
                 t2 = time.time()
                 dtb = (dtb*i + (t2 - t1))/(i + 1)
-                print "That took %.2f seconds. ETTG: %.2f" %(t2-t1,
-                                                             dtb*(i))
+                print("That took %.2f seconds. ETTG: %.2f" %(t2-t1,
+                                                             dtb*(i)))
                 sys.stdout.flush()
                 np.seterr(under='warn')
                 g = g / (g.sum(0) + tiny)
@@ -320,7 +320,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                     except IOError:
                         kk += 1
                         time.sleep(np.random.random()*30)
-                        print """Could not open tempfile. Retrying ... """
+                        print("""Could not open tempfile. Retrying ... """)
                         sys.stdout.flush()
                     else:
                         break
@@ -345,7 +345,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                         happens, just report the exception and let sge know an error
                         occured
                         """
-                        print """Could not write to file. Retrying ... """
+                        print("""Could not write to file. Retrying ... """)
                         sys.stdout.flush()
                         kk += 1
                         time.sleep(np.random.random()*30)
@@ -371,7 +371,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
             np.seterr(under='warn')
             W = np.zeros(W.shape)
             t1 = time.time()
-            print "Constructing from file chunks..."
+            print("Constructing from file chunks...")
             sys.stdout.flush()
             for i in xrange(nchunks):
                 fid = open(files[i],'r')
@@ -380,14 +380,15 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 g = g.reshape(N*(spklength - 1) + 1, chunksizes[i])
                 W += np.dot(g,data[chunks[i]:chunks[i+1], 0]).flatten()
             t2 = time.time()
-            print "Constructing W tok %.2f seconds" % (t2 - t1, )
+            print("Constructing W tok %.2f seconds" % (t2 - t1, ))
+
             sys.stdout.flush()
             W = W / G
             W[0] = 0
             p = np.zeros((N, ))
             D = np.memmap(tempfile.TemporaryFile(prefix=scwd),dtype=np.float,shape=data.shape,mode='w+')
             t1 = time.time()
-            print "Constructing D from file chunks..."
+            print("Constructing D from file chunks...")
             sys.stdout.flush()
             for i in xrange(nchunks):
                 fid = open(files[i],'r')
@@ -400,7 +401,7 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                 except FloatingPointError:
                     pass
             t2 = time.time()
-            print "Constructing D tok %.2f seconds" % (t2 - t1, )
+            print("Constructing D tok %.2f seconds" % (t2 - t1, ))
             sys.stdout.flush()
         finally:
             for f in files:
@@ -422,13 +423,13 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
 
         nspikes = p*winlength
 
-        print "\tSpikes found per template: " 
-        print ' '.join((map(lambda s: '%.2f' %s,nspikes)))
+        print("\tSpikes found per template: " )
+        print(' '.join((map(lambda s: '%.2f' %s,nspikes))))
         sys.stdout.flush()
         if dosplit:
             #remove templates with too low firing rate and replace with a new
             #guess
-            print "\tTrying to split clusters..."
+            print("\tTrying to split clusters...")
             sys.stdout.flush()
             for i in xrange(len(spkform)):
                 if p[i] < splitp:
@@ -442,11 +443,11 @@ def learn(data,spkform=None,iterations=10,cinv=None,p=None,splitp=None,dosplit=T
                                                                        1:(j + 1)*(spklength - 1)]*.98
                         p[i] = p[j] / 2
                         p[j] =p[j] / 2
-                        print "\t\tWaveformsupdate: %d <- %d" % (i, j)
+                        print("\t\tWaveformsupdate: %d <- %d" % (i, j))
                         sys.stdout.flush()
                         break
                     else:
-                        print "\t\tClustersplitting failed"
+                        print("\t\tClustersplitting failed")
                         sys.stdout.flush()
 
 
