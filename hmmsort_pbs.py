@@ -15,7 +15,7 @@ def level(cwd):
     if pp.isdigit():
         ll = 'day'
     else:
-        numstr = [str(i) for i in xrange(10)]
+        numstr = [str(i) for i in range(10)]
         # sessioneye is a valid session direcory
         # so we want to add 'eye' to the list of valid suffixes
         # that will be removed properly
@@ -35,7 +35,7 @@ if __name__ == '__main__':
         ch = 1
     else:
         # construct a pattern for finding all highpass files below this level
-        bb = os.sep.join([levels[i]+"*" for i in xrange(levelidx+1,len(levels))])
+        bb = os.sep.join([levels[i]+"*" for i in range(levelidx+1,len(levels))])
         ch = None
     queue = dopts.get("-q","flexi")
     bb = os.sep.join([bb] + ["*highpass.mat"])
@@ -81,25 +81,25 @@ if __name__ == '__main__':
             if not "--dry-run" in dopts.keys():
                 fii = open("sorting_inprogress","w")
                 fii.close()
-                jobid = subprocess.run(['/opt/pbs/bin/qsub', fname_learn],capture_output=True, shell=False).strip()
+                jobid = subprocess.run(['/opt/pbs/bin/qsub', fname_learn],capture_output=True, shell=False).stdout.strip()
 
         with open(fname_decode,"w") as fo:
              # request more memory as some decode jobs were being killed for
              # exceeding the default 4 GB
             fo.write("#!/bin/bash\n")
             fo.write("#PBS -N decode\n")
-            if queue is "flexi":
+            if queue == "flexi":
                 # commenting out next line as it does not seem necessary
                 # and because I would like to keep the jobid for hmm_learn on the
                 # 3rd line since some scripts are expecting that
                 fo.write("#PBS -l select=8:ncpus=1:mem=3GB\n")
                 fo.write("#PBS -l walltime=128:00:00\n")
-            elif queue is "serial":
+            elif queue == "serial":
                 fo.write("#PBS -q serial\n")
                 fo.write("#PBS -l mem=30GB\n")
                 fo.write("#PBS -l select=1:ncpus=1:mem=30GB")
                 fo.write("#PBS -l walltime=128:00:00\n")
-            elif queue is "parallel12":
+            elif queue == "parallel12":
                 fo.write("#PBS -q parallel12\n")
                 fo.write("#PBS -l mem=30GB\n")
                 fo.write("#PBS -l walltime=48:00:00\n")
@@ -126,5 +126,5 @@ if __name__ == '__main__':
             fo.write("touch sorting_done\n")
 
             if not "--dry-run" in dopts.keys():
-                 jobid = subprocess.run(['/opt/pbs/bin/qsub', fname_decode], capture_output=True,shell=False).strip()
+                 jobid = subprocess.run(['/opt/pbs/bin/qsub', fname_decode], capture_output=True,shell=False).stdout.strip()
     sys.exit(0)
