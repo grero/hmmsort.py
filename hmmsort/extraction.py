@@ -14,6 +14,8 @@ import scipy.linalg
 from . import fileReaders as fr
 from . import utility
 from . import fileWriters as fw
+from . import utility as util
+
 
 def readDataFile(fname,headerOnly=False,chunk=None):
     """
@@ -36,9 +38,11 @@ def readDataFile(fname,headerOnly=False,chunk=None):
             nchs = np.fromfile(fid,count=1,dtype=np.uint16).astype(np.uint64)
         else:
             nchs = np.fromfile(fid,count=1,dtype=np.uint8).astype(np.uint64)
-        samplingrate = np.fromfile(fid,count=1,dtype=np.uint32).astype(np.uint64) 
+        samplingrate = util.first(np.fromfile(fid,count=1,dtype=np.uint32).astype(np.uint64))
     fid.close()
-    ndatapts = (fsize-headersize.astype(np.uint64))/nchs.astype(np.uint64)/2
+    nchs = int(util.first(nchs))
+    hs = int(util.first(headersize))
+    ndatapts = (fsize-hs)//nchs//2
     #create a memory map 
     if headerOnly: 
         return {'channels':nchs, 'samplingRate': samplingrate,
@@ -46,7 +50,12 @@ def readDataFile(fname,headerOnly=False,chunk=None):
                 'headerSize':headersize}
     if chunk is None:
         #create a memory map of the whole file
-        data = np.memmap(fname,offset=headersize,dtype=np.int16,mode='r')
+        print("headersize: {}".format(util.first(headersize)))
+        print("typeof(headersize): {}".format(type(util.first(headersize))))
+        print("fsize: {}".format(fsize))
+        hs = int(util.first(headersize))
+        data = np.memmap(fname, offset=hs, dtype=np.int16,
+                         mode='r', shape=(int((fsize-hs)/2),))
     else:
         #chunk specifies a range of data points to read
         #make sure we are within the limits of the file
@@ -60,8 +69,8 @@ def readDataFile(fname,headerOnly=False,chunk=None):
 
         fid.close()
 
-
-    return data.reshape(data.size/nchs,nchs).T,samplingrate
+    print("nchs: {}".format(nchs))
+    return data.reshape(data.size//nchs, nchs).T, samplingrate
 
 def writeDataFile(fname,data,samplingRate=30000,headerSize=90):
     nchs,npts = data.shape
