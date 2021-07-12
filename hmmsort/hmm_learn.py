@@ -14,6 +14,7 @@ import glob
 import traceback
 from hmmsort import fileReaders as fr
 import scipy.interpolate as interpolate
+from scipy.interpolate import make_interp_spline
 import scipy.io as mio
 from hmmsort import extraction
 import time
@@ -975,9 +976,10 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
         spklennew = spklen*10+10
         splineform = np.zeros((dim,spklennew,spks))
         splineform_test = np.zeros((dim,spklennew,spks))
-        for i in xrange(spks):
-            for j in xrange(dim):
-                S = interpolate.spline(np.arange(spklen),spkform[i,j,:],np.linspace(0,spklen-1,spklen*10))
+        for i in range(spks):
+            for j in range(dim):
+                _spline = make_interp_spline(np.arange(spklen),spkform[i,j,:])
+                S = _spline(np.linspace(0,spklen-1,spklen*10))
                 splineform[j,:,i] = np.concatenate((np.zeros((10,)),S),axis=0)
                 splineform_test[j,:,i] = np.concatenate((np.zeros((10,)),np.ones((spklen*10-10,)),np.zeros((10,))),axis=0)
 
@@ -1031,17 +1033,18 @@ def combineSpikes(spkform_old,pp,cinv,winlen,tolerance=4,
         sys.stdout.flush()
 
         #shift back
-        for i in xrange(1,spks):
+        for i in range(1,spks):
             if shift[i]!=1:
                 splineform[:,:,i] = np.concatenate((splineform[:,-shift[i]+1:,i],splineform[:,:-shift[i]+1,i]),axis=1)
 
 
         #downsample
         spkform = np.zeros((spks,)+spkform.shape[1:])
-        for i in xrange(spks):
-            S = np.zeros((splineform.shape[0],(splineform.shape[1]-1)/10-1))
-            for k in xrange(dim):
-                S[k] = interpolate.spline(np.arange(splineform.shape[1]),splineform[k,:,i],np.arange(21,splineform.shape[1]+1,10)-10)
+        for i in range(spks):
+            S = np.zeros((splineform.shape[0],(splineform.shape[1]-1)//10-1))
+            for k in range(dim):
+                _spline = make_interp_spline(np.arange(splineform.shape[1]),splineform[k,:,i])
+                S[k] = _spline(np.arange(21,splineform.shape[1]+1,10)-10)
             spkform[i] = np.concatenate((np.zeros((splineform.shape[0],1)),S),axis=1)
 
 
@@ -1088,11 +1091,12 @@ def combineTest(spks,splineform,splineform_test,cinv,winlen,p,maxp,alpha):
     pvalt = np.zeros((spks,spks))
     teststat = np.zeros((spks,spks))
 
-    for i in xrange(spks-1):
-        for j in xrange(i+1,spks):
-            diffnorm = np.zeros((splineform.shape[0],splineform.shape[1]/10+1))
-            for k in xrange(splineform.shape[0]):
-                diffnorm[k,:] = interpolate.spline(np.arange(splineform.shape[1]),splineform[k,:,i]-splineform[k,:,j],np.arange(0,splineform.shape[1]+1,10))
+    for i in range(spks-1):
+        for j in range(i+1,spks):
+            diffnorm = np.zeros((splineform.shape[0],splineform.shape[1]//10+1))
+            for k in range(splineform.shape[0]):
+                _spline = make_interp_spline(np.arange(splineform.shape[1]),splineform[k,:,i]-splineform[k,:,j])
+                diffnorm[k,:] = _spline(np.arange(0,splineform.shape[1]+1,10))
             teststat[i,j] = np.trace(np.dot(diffnorm.T,np.dot(_cinv,diffnorm)))/(1.0/(min(winlen*p[i],maxp))+1.0/min(winlen*p[j],maxp))
             if teststat[i,j] < diffnorm.size:
                 pvalt[i,j] = 1
